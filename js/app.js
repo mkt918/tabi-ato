@@ -8,6 +8,7 @@ import * as M from './model.js';
 import { search, debounce } from './geocode.js';
 import { createMap } from './map.js';
 import { processImage } from './photo.js';
+import { fetchRoute } from './route.js';
 import { root, h, toast, navigate, makeSaver } from './ui.js';
 import { renderPrint } from './print-view.js';
 import { renderSettings } from './settings-view.js';
@@ -176,13 +177,45 @@ async function renderEdit({ id }) {
     commit(M.addVisit(trip, v));
     activeId = v.id;
     renderVisits();
-    map.setVisits(trip.visits);
-    map.setActive(v.id, { pan: false });
+    refreshMap(true);
     const nameInput = listEl.querySelector(`[data-id="${v.id}"] .visit__name`);
     if (nameInput && !name) nameInput.focus();
   }
 
-  function refreshMap(fit) { map.setVisits(trip.visits, { fit }); map.setActive(activeId, { pan: false }); }
+  const routeOf = (a, b) => M.routeLine(trip, a, b);
+  function refreshMap(fit) { map.setVisits(trip.visits, { fit, routeOf }); map.setActive(activeId, { pan: false }); syncRoutes(); }
+
+  // -- 道なりルート：不足区間を 1 本ずつ取得して保存。失敗はその区間だけ直線
+  const routeNote = h('p', { class: 'route-note', hidden: true });
+  let syncing = false;
+  async function syncRoutes() {
+    if (!alive || syncing) return;
+    if (trip.routing !== 'road') { routeNote.hidden = true; return; }
+    syncing = true;
+    try {
+      let pruned = M.pruneRoutes(trip);
+      if (Object.keys(pruned.routes).length !== Object.keys(trip.routes || {}).length) commit(M.touch(pruned));
+      let missing = M.missingSegments(trip);
+      if (missing.length) { routeNote.hidden = false; routeNote.textContent = '道なりの経路を取得中…'; }
+      while (alive && missing.length) {
+        const seg = missing[0];
+        let coords = null;
+        try { coords = await fetchRoute(seg.profile, seg.from, seg.to); } catch { coords = null; }
+        if (!alive) return;
+        // 取得中に地点が変わっていたら、その区間だけ捨てる
+        if (M.segments(trip).some((x) => x.key === seg.key)) {
+          commit(M.touch(M.setRoute(trip, seg.key, coords)));
+          map.setVisits(trip.visits, { fit: false, routeOf }); map.setActive(activeId, { pan: false });
+        }
+        missing = M.missingSegments(trip);
+      }
+      const failed = M.failedRouteCount(trip);
+      routeNote.hidden = failed === 0;
+      if (failed) routeNote.textContent = `${failed} 区間は経路が取れず直線です（「道なり」を押し直すと再取得）`;
+    } finally {
+      syncing = false;
+    }
+  }
 
   async function addPhotos(visitId, files) {
     const errors = [];
@@ -310,6 +343,18 @@ async function renderEdit({ id }) {
         onclick: () => { commit(M.touch({ ...trip, mapStyle: val })); map.setStyle(val);
           for (const [k, b] of Object.entries(styleBtns)) b.setAttribute('aria-pressed', String(k === val)); } }, label))));
 
+  const routeBtns = {};
+  const routeCtl = h('div', { class: 'map-style map-style--route' },
+    ...[['road', '道なり'], ['straight', '直線']].map(([val, label]) =>
+      (routeBtns[val] = h('button', { class: 'map-style__btn', type: 'button', 'aria-pressed': String(trip.routing === val),
+        onclick: () => {
+          // 「道なり」を押し直したら失敗区間を再取得できるよう null を捨てる
+          const routes = Object.fromEntries(Object.entries(trip.routes || {}).filter(([, v]) => v !== null));
+          commit(M.touch({ ...trip, routing: val, routes }));
+          for (const [k, b] of Object.entries(routeBtns)) b.setAttribute('aria-pressed', String(k === val));
+          refreshMap(false);
+        } }, label))));
+
   root.replaceChildren(
     h('header', { class: 'topbar' },
       h('a', { class: 'btn btn--ghost', href: '#/' }, '← 一覧'),
@@ -325,7 +370,7 @@ async function renderEdit({ id }) {
         h('div', { class: 'search' }, searchInput, results, searchHint),
         listEl,
       ),
-      h('section', { class: 'map-pane' }, mapEl, styleCtl),
+      h('section', { class: 'map-pane' }, mapEl, h('div', { class: 'map-ctls' }, routeCtl, styleCtl), routeNote),
     ),
   );
 
@@ -336,7 +381,7 @@ async function renderEdit({ id }) {
       listEl.querySelector(`[data-id="${vid}"]`)?.scrollIntoView({ block: 'nearest' }); },
   });
   renderVisits();
-  map.setVisits(trip.visits);
+  refreshMap(true);
 
   document.addEventListener('click', closeResults);
   function closeResults(e) { if (!e.target.closest('.search')) results.hidden = true; }

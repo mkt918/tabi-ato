@@ -89,6 +89,32 @@ export async function run() {
     assert(M.formatDateRange('2026-01-01', '2026-01-03') === '2026年1月1日 〜 2026年1月3日');
   });
 
+  // ---- routes ------------------------------------------------------------
+  await test('routeProfile: 徒歩=foot、車/バス/未指定=driving、電車等は null', () => {
+    assert(M.routeProfile('walk') === 'foot' && M.routeProfile('car') === 'driving' && M.routeProfile(null) === 'driving');
+    assert(M.routeProfile('train') === null && M.routeProfile('plane') === null);
+  });
+  await test('segments / missingSegments / pruneRoutes / routeLine', () => {
+    let t = M.createTrip({ visits: [v({ id: 'a', lat: 35, lng: 135 }), v({ id: 'b', order: 1, lat: 35.1, lng: 135.1, transport: 'walk' }), v({ id: 'c', order: 2, lat: 35.2, lng: 135.2, transport: 'train' })] });
+    const segs = M.segments(t);
+    assert(segs.length === 1 && segs[0].profile === 'foot', '電車区間は含まない');
+    assert(M.missingSegments(t).length === 1);
+    const coords = [[35, 135], [35.05, 135.05], [35.1, 135.1]];
+    t = M.setRoute(t, segs[0].key, coords);
+    assert(M.missingSegments(t).length === 0);
+    eq(M.routeLine(t, t.visits[0], t.visits[1]), coords);
+    eq(M.routeLine(t, t.visits[1], t.visits[2]), [[35.1, 135.1], [35.2, 135.2]], '電車は直線');
+    eq(M.routeLine({ ...t, routing: 'straight' }, t.visits[0], t.visits[1]).length, 2, '直線モード');
+    // 移動手段を変えるとキーが変わり、古い経路は prune で消える
+    t = M.updateVisit(t, 'b', { transport: 'car' });
+    assert(M.missingSegments(t).length === 1);
+    t = M.pruneRoutes(t);
+    eq(Object.keys(t.routes), []);
+    // 失敗（null）は missing に含めず、failedRouteCount に数える
+    t = M.setRoute(t, M.segments(t)[0].key, null);
+    assert(M.missingSegments(t).length === 0 && M.failedRouteCount(t) === 1);
+  });
+
   // ---- store -------------------------------------------------------------
   const s = createStore('tabi-ato-test');
   await s.clear();

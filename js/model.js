@@ -33,6 +33,8 @@ export function createTrip(partial = {}) {
     mapStyle: partial.mapStyle ?? 'positron',
     showDates: partial.showDates ?? true,
     subtitle: partial.subtitle ?? '',
+    routing: partial.routing === 'straight' ? 'straight' : 'road',  // 線を道なりにするか
+    routes: { ...(partial.routes ?? {}) },      // { [segmentKey]: [[lat,lng],...] | null(取得失敗) }
     slots: { ...(partial.slots ?? {}) },        // { [templateId]: (photoId|null)[] } 写真スロット割当
     photoPos: { ...(partial.photoPos ?? {}) },  // { [photoId]: { x, y } } object-position（%）
     visits: normalizeOrder(partial.visits ?? []),
@@ -211,4 +213,64 @@ export function setSlot(trip, tpl, index, photoId) {
   const cur = storedSlots(trip, tpl).map((p) => (photoId && p === photoId ? '' : p));
   cur[index] = photoId ?? '';
   return touch({ ...trip, slots: { ...trip.slots, [tpl.id]: cur } });
+}
+
+// ---- 道なりルート（OSRM）----------------------------------------------------
+
+/** 移動手段 → OSRM profile。道路経路が無いものは null（直線） */
+export function routeProfile(transport) {
+  if (transport === 'walk') return 'foot';
+  if (transport == null || transport === 'car' || transport === 'bus') return 'driving';
+  return null;
+}
+
+const c5 = (n) => Number(n).toFixed(5);
+
+/** 区間キー：両端の座標と profile で決まる（地点の差し替えや移動手段変更で変わる） */
+export function segmentKey(from, to, profile) {
+  return `${c5(from.lat)},${c5(from.lng)}>${c5(to.lat)},${c5(to.lng)}|${profile}`;
+}
+
+/** 道なり対象の区間一覧（order 順の隣接ペア） */
+export function segments(trip) {
+  const vs = normalizeOrder(trip.visits);
+  const out = [];
+  for (let i = 1; i < vs.length; i++) {
+    const profile = routeProfile(vs[i].transport);
+    if (!profile) continue;
+    out.push({ key: segmentKey(vs[i - 1], vs[i], profile), from: vs[i - 1], to: vs[i], profile });
+  }
+  return out;
+}
+
+/** まだ取得していない区間（失敗して null のものは含めない） */
+export function missingSegments(trip) {
+  return segments(trip).filter((s) => !(s.key in (trip.routes || {})));
+}
+
+/** 現在の区間に無い経路を捨てる */
+export function pruneRoutes(trip) {
+  const keep = new Set(segments(trip).map((s) => s.key));
+  const routes = {};
+  for (const [k, v] of Object.entries(trip.routes || {})) if (keep.has(k)) routes[k] = v;
+  return { ...trip, routes };
+}
+
+export function setRoute(trip, key, coords) {
+  return { ...trip, routes: { ...trip.routes, [key]: coords } };
+}
+
+/** 描画用：区間 (from→to) の座標列。道なりが無ければ直線 */
+export function routeLine(trip, from, to) {
+  const straight = [[from.lat, from.lng], [to.lat, to.lng]];
+  if (trip.routing !== 'road') return straight;
+  const profile = routeProfile(to.transport);
+  if (!profile) return straight;
+  const r = trip.routes?.[segmentKey(from, to, profile)];
+  return Array.isArray(r) && r.length >= 2 ? r : straight;
+}
+
+/** 道なりにできなかった区間数（取得失敗＝null） */
+export function failedRouteCount(trip) {
+  return segments(trip).filter((s) => trip.routes?.[s.key] === null).length;
 }

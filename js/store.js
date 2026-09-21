@@ -52,12 +52,14 @@ export function createStore(dbName = 'tabi-ato') {
   return {
     name: dbName,
 
+    // 読み出し時は createTrip で欠けている項目（後から増えたフィールド）を既定値で補う
     async getAllTrips() {
       const trips = await tx('trips', 'readonly', (s) => req(s.getAll()));
-      return trips.sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : -1));
+      return trips.map((t) => createTrip(t)).sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : -1));
     },
-    getTrip(id) {
-      return tx('trips', 'readonly', (s) => req(s.get(id)));
+    async getTrip(id) {
+      const t = await tx('trips', 'readonly', (s) => req(s.get(id)));
+      return t ? createTrip(t) : t;
     },
     /**
      * @param {object} trip

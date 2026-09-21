@@ -80,14 +80,20 @@ export function createMap(el, opts = {}) {
     });
   }
 
-  function setVisits(visits, { fit = true } = {}) {
+  /**
+   * @param {object[]} visits
+   * @param {{ fit?: boolean, routeOf?: (from, to) => Array<[number,number]> }} opts
+   *   routeOf を渡すと区間の座標列（道なり）で線を引く。無ければ直線
+   */
+  function setVisits(visits, { fit = true, routeOf = null } = {}) {
     layer.clearLayers();
     markers = new Map();
     const sorted = [...visits].sort((a, b) => a.order - b.order);
     for (let i = 1; i < sorted.length; i++) {
       const a = sorted[i - 1];
       const b = sorted[i];
-      L.polyline([[a.lat, a.lng], [b.lat, b.lng]], lineStyle(b.transport, color)).addTo(layer);
+      const line = routeOf ? routeOf(a, b) : [[a.lat, a.lng], [b.lat, b.lng]];
+      L.polyline(line, lineStyle(b.transport, color)).addTo(layer);
     }
     sorted.forEach((v, i) => {
       const m = L.marker([v.lat, v.lng], { icon: pinIcon(i + 1, v.id === activeId), title: v.name });

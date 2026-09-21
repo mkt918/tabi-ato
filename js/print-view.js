@@ -158,7 +158,7 @@ export async function renderPrint({ id }) {
     const seq = ++buildSeq;
     if (mapEl) {
       map = createMap(mapEl, { style: trip.mapStyle, interactive: false, color: getComputedStyle(sheet).getPropertyValue('--sheet-accent').trim() || undefined });
-      map.setVisits(trip.visits);
+      map.setVisits(trip.visits, { routeOf: (a, b) => M.routeLine(trip, a, b) });
       const ready = Promise.all([map.whenTilesLoaded(), document.fonts.ready]);
       const timeout = new Promise((r) => setTimeout(() => r('timeout'), 10000));
       Promise.race([ready, timeout]).then((v) => {

@@ -39,8 +39,24 @@
 | 18 | 検証：Opus サブエージェントによる診断 → 再現する指摘を修正 | 報告と修正結果を TASKS.md 末尾に記録 | 全ファイル | 完了(2026-09-21) |
 | 19 | CP3 公開：git init → gh repo create → GitHub Pages → README に URL | 公開 URL で一通り動く | README.md | 完了(2026-09-21 https://mkt918.github.io/tabi-ato/) |
 
-## Phase 4 将来（都度判断）
-- 自由配置編集／道なりルート（OSRM）／Canva 連携／クラウド同期／EXIF 回転補正（崩れたら）
+## Phase 4-A 道なりルート（README「Phase 4 追加要件 A」）
+
+| # | 内容 | 完了条件 | 触ってよいファイル | 状態 |
+|---|---|---|---|---|
+| 20 | `route.js`：OSRM 取得（profile 変換・直列・失敗は null）＋ model に `routing` / `routes` と区間キー・不要経路の掃除 ＋ tests | 区間キーが安定し、地点削除で不要な routes が消える。tests 追加 | js/route.js, js/model.js, js/tests.js | 完了(2026-09-21) |
+| 21 | 編集画面：道なり／直線チップ、区間の再取得、地図に経路描画、失敗区間の一言 | 地点追加・並替・移動手段変更で該当区間だけ再取得され保存される | js/app.js, js/map.js, css/style.css | 完了(2026-09-21) |
+| 22 | 印刷ビューでも同じ経路を描く | 編集画面と同じ線が A4 に出る | js/print-view.js, js/map.js | 完了(2026-09-21) |
+
+## Phase 4-B 自由配置編集（README「Phase 4 追加要件 B」）
+
+| # | 内容 | 完了条件 | 触ってよいファイル | 状態 |
+|---|---|---|---|---|
+| 23 | テンプレ定義にブロック初期配置（mm）を持たせ、print.css を絶対配置に置き換え。`Trip.layout` と model の `resolveLayout` ＋ tests | 3 テンプレの見た目が現状と同等。tests 追加 | js/templates.js, js/model.js, css/print.css, js/tests.js | 未 |
+| 24 | 印刷ビュー「レイアウト調整」：ブロックのドラッグ移動・角リサイズ・1mm スナップ・用紙内制限・初期配置に戻す | 移動・リサイズが保存され、リロード後も維持。印刷に枠やハンドルが出ない | js/print-view.js, css/print.css, css/style.css | 未 |
+| 25 | 受け入れ＋公開（push） | tests 全通過、公開 URL で A・B が動く | — | 未 |
+
+## Phase 4 その他（都度判断）
+- Canva 連携／クラウド同期／EXIF 回転補正（崩れたら）
 
 ## 診断記録（2026-09-21、Opus サブエージェント。17 件）
 

@@ -104,8 +104,10 @@ export function createStore(dbName = 'tabi-ato') {
     /** 全データを 1 つの JSON オブジェクトへ（写真は base64） */
     async exportAll() {
       const trips = await this.getAllTrips();
+      const referenced = new Set(trips.flatMap((t) => t.visits.flatMap((v) => v.photoIds)));
       const photos = {};
       for (const p of await this.getAllPhotos()) {
+        if (!referenced.has(p.id)) continue; // 中断などで残った孤児は書き出さない
         photos[p.id] = {
           mime: p.blob.type || 'image/jpeg',
           base64: await blobToBase64(p.blob),

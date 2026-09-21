@@ -19,6 +19,18 @@ let cleanup = null;
 
 const isEmptyTrip = (t) => !t.title && !t.subtitle && t.visits.length === 0;
 
+/** 最後のバックアップ（JSON 書き出し）からの経過を案内する 1 行 */
+function backupHint(trips) {
+  if (!trips.some((t) => t.visits.some((v) => v.photoIds.length))) return null;
+  let last = null;
+  try { last = localStorage.getItem('tabiato.lastExportAt'); } catch { /* noop */ }
+  const days = last ? Math.floor((Date.now() - Date.parse(last)) / 86400000) : null;
+  if (days != null && days < 30) return null;
+  return h('p', { class: 'hint backup-hint' },
+    days == null ? 'まだ JSON を書き出していません。' : `最後の書き出しから ${days} 日たっています。`,
+    'データはこのブラウザの中だけにあります。', h('a', { href: '#/settings' }, '設定から書き出す'));
+}
+
 async function renderList() {
   // 「新しい旅」を押して何も入れずに戻った空の旅は残さない
   const all = await store.getAllTrips();
@@ -81,7 +93,7 @@ async function renderList() {
         } }, '新しい旅'),
       ),
     ),
-    h('main', { class: 'page' }, list),
+    h('main', { class: 'page' }, backupHint(trips), list),
   );
   return () => {};
 }
@@ -197,7 +209,7 @@ async function renderEdit({ id }) {
       if (Object.keys(pruned.routes).length !== Object.keys(trip.routes || {}).length) commit(M.touch(pruned));
       let missing = M.missingSegments(trip);
       if (missing.length) { routeNote.hidden = false; routeNote.textContent = '道なりの経路を取得中…'; }
-      while (alive && missing.length) {
+      while (alive && trip.routing === 'road' && missing.length) {
         const seg = missing[0];
         let coords = null;
         try { coords = await fetchRoute(seg.profile, seg.from, seg.to); } catch { coords = null; }
@@ -209,12 +221,22 @@ async function renderEdit({ id }) {
         }
         missing = M.missingSegments(trip);
       }
-      const failed = M.failedRouteCount(trip);
+      const failed = trip.routing === 'road' ? M.failedRouteCount(trip) : 0;
       routeNote.hidden = failed === 0;
       if (failed) routeNote.textContent = `${failed} 区間は経路が取れず直線です（「道なり」を押し直すと再取得）`;
     } finally {
       syncing = false;
     }
+  }
+
+  /** 入力中の欄を壊さない再描画：コメント／名前にフォーカスがあれば blur まで待つ */
+  function renderVisitsSoft() {
+    const a = document.activeElement;
+    if (a && listEl.contains(a) && a.matches('textarea, input[type="text"]')) {
+      a.addEventListener('blur', () => { if (alive) renderVisits(); }, { once: true });
+      return;
+    }
+    renderVisits();
   }
 
   async function addPhotos(visitId, files) {
@@ -235,13 +257,13 @@ async function renderEdit({ id }) {
     }
     if (!alive) return;
     if (errors.length) toast(errors.join('\n'), 'error');
-    renderVisits();
+    renderVisitsSoft();
   }
 
   async function removePhoto(visitId, photoId) {
     const cur = trip.visits.find((x) => x.id === visitId);
     if (!cur) return;
-    commit(M.updateVisit(trip, visitId, { photoIds: cur.photoIds.filter((p) => p !== photoId) }));
+    commit(M.forgetPhoto(M.updateVisit(trip, visitId, { photoIds: cur.photoIds.filter((p) => p !== photoId) }), photoId));
     await store.deletePhoto(photoId);
     thumbs.delete(photoId);
     renderVisits();
@@ -331,7 +353,7 @@ async function renderEdit({ id }) {
       listEl.append(item);
     });
     const act = trip.visits.find((x) => x.id === activeId);
-    if (act && act.photoIds.some((pid) => !thumbs.has(pid))) loadThumbs(act.photoIds).then(renderVisits);
+    if (act && act.photoIds.some((pid) => !thumbs.has(pid))) loadThumbs(act.photoIds).then(() => { if (alive) renderVisitsSoft(); });
   }
 
   // -- 地図
@@ -390,6 +412,7 @@ async function renderEdit({ id }) {
     alive = false;
     document.removeEventListener('click', closeResults);
     map.destroy();
+    return save.flush();
   };
 }
 
@@ -404,8 +427,13 @@ const routes = [
 
 let routeSeq = 0;
 async function route() {
-  if (cleanup) { cleanup(); cleanup = null; }
   const seq = ++routeSeq;
+  if (cleanup) {
+    // 前画面の保存キューが空になるまで待ってから次画面を読む（未保存の変更を古いデータで上書きしない）
+    const pending = cleanup(); cleanup = null;
+    if (pending && typeof pending.then === 'function') { try { await pending; } catch { /* 保存失敗は各画面が通知済み */ } }
+    if (seq !== routeSeq) return;
+  }
   if (typeof L === 'undefined') {
     root.replaceChildren(h('main', { class: 'page' },
       h('p', { class: 'empty' }, '地図ライブラリを読み込めませんでした。ネットワーク接続を確認して、ページを再読み込みしてください。')));
@@ -428,4 +456,6 @@ async function route() {
 }
 
 window.addEventListener('hashchange', route);
+// ブラウザの容量整理で IndexedDB を消されにくくする（対応ブラウザのみ。iOS Safari は非対応）
+navigator.storage?.persist?.().catch(() => {});
 route();

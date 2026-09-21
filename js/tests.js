@@ -5,7 +5,7 @@
 
 import * as M from './model.js';
 import { createStore, EXPORT_VERSION } from './store.js';
-import { TEMPLATE_LIST, getTemplate, buildSheet } from './templates.js';
+import { TEMPLATE_LIST, getTemplate, buildSheet, fitOverflow } from './templates.js';
 
 const results = [];
 async function test(name, fn) {
@@ -239,6 +239,37 @@ export async function run() {
       eq(nodes.map((n) => n.dataset.block).sort(), tpl.blocks.map((b) => b.id).sort(), tpl.id);
       assert(nodes.every((n) => /mm$/.test(n.style.left) && /mm$/.test(n.style.height)), 'mm 配置なし');
     }
+  });
+  await test('templates: 15 地点・長い地名でも全テンプレの一覧／タイムラインが溢れず「他 n 地点」が見える', () => {
+    const many = M.createTrip({ id: 'tf', title: 'とても長いタイトルのテスト', visits: Array.from({ length: 15 }, (_, i) =>
+      v({ id: 'v' + i, order: i, name: `第${i + 1}訪問地・とても長い地名のサンプル`, comment: 'ひとことコメントも長めに書いておく。二行目まで届くかもしれない', date: `2026-04-${String(1 + (i % 3)).padStart(2, '0')}` })) });
+    const host = document.createElement('div');
+    host.style.cssText = 'position:absolute;left:-9999px;top:0';
+    document.body.append(host);
+    try {
+      for (const tpl of TEMPLATE_LIST) {
+        const sheet = buildSheet(many, tpl, M.resolveSlots(many, tpl), () => null);
+        host.replaceChildren(sheet);
+        fitOverflow(sheet);
+        for (const block of sheet.querySelectorAll('.sheet__legend, .sheet__timeline')) {
+          assert(block.scrollHeight <= block.clientHeight + 0.5, `${tpl.id}: ${block.className} が溢れている`);
+          const more = block.querySelector('.legend__more');
+          assert(more, `${tpl.id}: 「他 n 地点」が無い`);
+          const shown = block.querySelectorAll('.legend__item, .tl__item').length;
+          const n = Number(more.textContent.match(/\d+/)[0]);
+          assert(shown + n === 15, `${tpl.id}: 表示 ${shown} + 他 ${n} ≠ 15`);
+          assert(more.getBoundingClientRect().bottom <= block.getBoundingClientRect().bottom + 0.5, `${tpl.id}: 注記が枠の外`);
+        }
+      }
+    } finally {
+      host.remove();
+    }
+  });
+  await test('forgetPhoto: photoPos と slots から参照が消える', () => {
+    const t = { ...M.createTrip({ id: 'fp' }), photoPos: { p1: { x: 1, y: 2 }, p2: { x: 3, y: 4 } }, slots: { 'map-hero': ['p1', 'p2', null] } };
+    const r = M.forgetPhoto(t, 'p1');
+    eq(Object.keys(r.photoPos), ['p2']);
+    eq(r.slots['map-hero'], [null, 'p2', null]);
   });
   await test('templates: 写真ありで img が入り、超過地点は「他 n 地点」', () => {
     const many = M.createTrip({ id: 'tm', visits: Array.from({ length: 15 }, (_, i) => v({ id: 'v' + i, order: i, name: 'n' + i })) });

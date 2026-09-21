@@ -159,6 +159,15 @@ export function allPhotoIds(trip) {
   return [...seen];
 }
 
+/** 写真を外したとき、見せ位置・スロット割当からも参照を消す */
+export function forgetPhoto(trip, photoId) {
+  const photoPos = { ...trip.photoPos };
+  delete photoPos[photoId];
+  const slots = {};
+  for (const [k, arr] of Object.entries(trip.slots || {})) slots[k] = arr.map((p) => (p === photoId ? null : p));
+  return { ...trip, photoPos, slots };
+}
+
 /** photoId → それを持つ Visit */
 export function visitOfPhoto(trip, photoId) {
   return trip.visits.find((v) => v.photoIds.includes(photoId)) || null;

@@ -125,6 +125,8 @@ A4 DOM はこの定義からテンプレ側の関数で組み立て、各ブロ�
 - 印刷専用ビュー `#/print/<tripId>`。`210mm × 297mm`（横は逆）の固定ボックスに描く。`@page { size: A4; margin: 0 }`
 - 地図は印刷ビューでも Leaflet を生かしたまま置く（別インスタンス、`zoomControl:false`、操作無効）。
   **タイル読み込み完了（`tileLayer.on('load')`）を待ってから印刷ボタンを有効化**する。ここを省くと白抜けが出る
+- 印刷ビューの地図は **Canvas レンダラ**（html2canvas が SVG の transform を無視して線がずれるため）
+- 地点一覧・タイムラインは mount 後に `fitOverflow()` で文字を最大 3 段縮め、それでも溢れる項目は末尾から外して「他 n 地点」に寄せる（A4 から溢れない保証）
 - Chrome 想定。「背景のグラフィック」チェックを促す注記を印刷ボタン脇に置く。iOS Safari は `@page` の横向き指定を無視するため、横長テンプレは PC の Chrome で印刷する
 - Phase 3 で PNG 書き出し（html2canvas、`useCORS:true`。OSMタイルは CORS 許可済み）を追加し、Canva ルートを開く
 
@@ -188,6 +190,7 @@ Opus は Phase 0 のみ。以降は `CLAUDE.md` の指示だけで他モデル�
 ### A. 道なりルート（OSRM）
 - 公開デモサーバー `https://router.project-osrm.org/route/v1/<profile>/<lng,lat;lng,lat>?overview=full&geometries=geojson` を使う（無料・無保証）
 - 移動手段 → profile：徒歩＝`foot`、車・バス・**未指定**＝`driving`。電車・飛行機・船は道路経路が無いので直線のまま
+  - **制約（2026-09-22 確認）**：公開デモサーバーは car プロファイルしか持たず、`foot` でも車道の経路が返る。徒歩区間も車道になることを許容する（将来 profile 別エンドポイントに差し替え可能なよう `route.js` の ENDPOINT は 1 か所）
 - 取得した経路座標は Trip に保存する（`routes: { "<fromVisitId>>" + "<toVisitId>|<profile>": [[lat,lng],...] }`）。地点の移動・並替・移動手段変更で該当区間だけ再取得。JSON 書き出しにも含まれる
 - 取得は 1 本ずつ直列。失敗（不達・経路なし）はその区間だけ直線にし、編集画面に「一部の区間は直線です」と一言出す
 - 旅ごとに `routing: 'road' | 'straight'`（既定 `road`）。編集画面の地図スタイル切替の隣にチップを置く。印刷ビューも同じ線を描く

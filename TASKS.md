@@ -75,6 +75,23 @@
 ## Phase 4 その他（都度判断）
 - Canva 連携／クラウド同期／EXIF 回転補正（崩れたら）
 
+## 修正（2026-09-22、QA 診断 15 件。すべて修正）
+1. 編集直後の遷移で古いデータ表示・偽の競合 → 画面 cleanup が `save.flush()` を返し、`route()` が待ってから次画面を読む（app.js / print-view.js）
+2. PNG でルート線がずれる → 印刷ビューの地図を Canvas レンダラに（map.js `canvas` オプション、print-view.js）
+3. 地点超過で「他 n 地点」が見えない → `templates.fitOverflow()`（文字 3 段縮小 → 末尾から外して注記）。tests に 15 地点×12 テンプレの溢れ検査を追加
+4. ドラッグ中の Ctrl+Z でゴースト残留 → `build()` 冒頭で `hideGhost()`
+5. 別種の操作が 1 手にまとまる → 履歴の merge をキー一致（title / arrow:<block> / num:<block>:<key>）に限定
+6. リサイズでキャプション種別が変わらない → 幅が 60/90mm をまたいだら再構築（ドラッグ・数値入力）
+7. 選択枠・アクティブ枠が印刷に出る → print で `outline:none !important`、PNG の onclone でクラス除去
+8. パネルが長くプレビューが画面外 → `#app:has(> .print-layout)` を 100dvh に固定しパネル／プレビューを内部スクロール。スマホは上プレビュー（52vh）＋下パネル
+9. 印刷で帰属表示が消える → ズームコントロールだけ非表示に
+10. 「直線」でも OSRM 取得が続く → ループ条件に `routing === 'road'`
+11. 写真処理完了の再描画で入力フォーカスが飛ぶ → 入力中は blur まで再描画を待つ（`renderVisitsSoft`）
+12. OSRM デモは徒歩でも車道 → README に制約として明記（コードは将来差し替え可能な構造のまま）
+13. iOS の 7 日削除・容量退避 → 起動時 `navigator.storage.persist()`、設定に案内、一覧に「最後の書き出しから n 日」の注意（30 日超／未実施のとき）
+14. 外した写真の参照残り・孤児 Blob → `model.forgetPhoto` で photoPos/slots から除去、`exportAll` は未参照写真を書き出さない
+15. Ctrl+Z 経由の切替で選択枠が持ち越し → `build()` で範囲外の selectedSlot / activeBlock を無効化
+
 ## 追加修正（2026-09-21）
 - CARTO Positron が API キー必須化（「API KEY REQUIRED」がタイルに表示）→ 淡色＝国土地理院 淡色地図、明るい＝OSM Japan Bright、標準＝OSM の 3 種へ置換。旧 `positron` は読み出し時に `pale` へ変換
 

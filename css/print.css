@@ -100,7 +100,8 @@
 @media print {
   html, body { margin: 0; padding: 0; background: #fff; height: auto; overflow: visible; }
   #app { min-height: 0; display: block; }
-  .topbar, .print-panel, .print-note, .toast, .leaflet-control-container { display: none !important; }
+  .topbar, .print-panel, .print-note, .toast, .leaflet-control-zoom { display: none !important; }
+  .sheet .slot--selected, .sheet--layout > [data-block].block--active { outline: none !important; }
   .print-layout { display: block; }
   .print-stage { padding: 0; overflow: visible; background: none; }
   .sheet-viewport { height: auto !important; overflow: visible; }

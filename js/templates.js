@@ -316,3 +316,46 @@ export function applyLayout(sheet, layout) {
     node.style.height = `${g.h}mm`;
   }
 }
+
+/**
+ * 用紙に載せた後に、地点一覧（legend）とタイムラインの溢れを直す（DOM の実測が要るので mount 後に呼ぶ）。
+ * 手順：文字を段階的に縮める（最大 3 段）→ それでも溢れる項目を末尾から外し「他 n 地点」に足す。
+ * @returns {number} 外した地点数
+ */
+export function fitOverflow(sheet) {
+  let dropped = 0;
+  for (const block of sheet.querySelectorAll('.sheet__legend, .sheet__timeline')) {
+    const overflow = () => block.scrollHeight > block.clientHeight + 0.5;
+    if (!overflow()) continue;
+    for (const size of ['0.95em', '0.9em', '0.85em']) {
+      block.style.fontSize = size;
+      if (!overflow()) break;
+    }
+    if (!overflow()) continue;
+    const itemSel = block.classList.contains('sheet__legend') ? '.legend__item' : '.tl__item';
+    let more = block.querySelector('.legend__more');
+    let hidden = more ? Number((more.textContent.match(/\d+/) || [0])[0]) : 0;
+    let guard = 200;
+    while (overflow() && guard-- > 0) {
+      const items = block.querySelectorAll(itemSel);
+      if (items.length <= 1) break;
+      const last = items[items.length - 1];
+      const group = last.parentElement;
+      last.remove();
+      hidden++; dropped++;
+      // タイムライン：項目が無くなった日付見出しも外す
+      if (group.classList.contains('tl__items') && group.children.length === 0) {
+        const date = group.previousElementSibling;
+        group.remove();
+        if (date && date.classList.contains('tl__date')) date.remove();
+      }
+      if (!more) {
+        more = document.createElement(block.classList.contains('sheet__legend') ? 'li' : 'p');
+        more.className = 'legend__more';
+      }
+      more.textContent = `他 ${hidden} 地点`;
+      block.append(more);
+    }
+  }
+  return dropped;
+}

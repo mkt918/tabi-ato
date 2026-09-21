@@ -20,6 +20,7 @@ export async function renderSettings() {
       a.download = `tabi-ato-${data.exportedAt.slice(0, 10)}.json`;
       a.click();
       setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+      try { localStorage.setItem('tabiato.lastExportAt', data.exportedAt); } catch { /* noop */ }
       status.textContent = `書き出しました（旅 ${data.trips.length} 件・写真 ${Object.keys(data.photos).length} 枚）。`;
     } catch (e) {
       status.textContent = '';
@@ -67,6 +68,7 @@ export async function renderSettings() {
       h('section', { class: 'card' },
         h('h2', { class: 'card__title' }, 'バックアップ・端末の移行'),
         h('p', {}, 'データはこのブラウザの中にだけ保存されています。別の端末で使うときや、ブラウザのデータを消す前に、JSON を書き出して保存してください。'),
+        h('p', {}, 'iPhone / iPad の Safari は 7 日間使わないとサイトのデータを消すことがあります。「ホーム画面に追加」から開くと消えません。月に一度は書き出しをおすすめします。'),
         h('div', { class: 'btn-row' }, exportBtn, importBtn, fileInput),
         status,
       ),

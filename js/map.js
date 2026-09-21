@@ -52,6 +52,8 @@ export function createMap(el, opts = {}) {
     keyboard: interactive,
     touchZoom: interactive,
     attributionControl: true,
+    // 印刷ビューは Canvas で線を描く（html2canvas が SVG の transform を無視してずれるため）
+    ...(opts.canvas ? { renderer: L.canvas(), preferCanvas: true } : {}),
   }).setView(JAPAN_CENTER, 5);
 
   let tileLayer = null;

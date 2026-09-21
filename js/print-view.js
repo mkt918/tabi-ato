@@ -14,7 +14,7 @@
 import { store } from './store.js';
 import * as M from './model.js';
 import { createMap } from './map.js';
-import { TEMPLATE_LIST, getTemplate, buildSheet, applyLayout } from './templates.js';
+import { TEMPLATE_LIST, getTemplate, buildSheet, applyLayout, fitOverflow, captionForWidth } from './templates.js';
 import { root, h, toast, makeSaver } from './ui.js';
 
 const ACCENT_LABELS = { ai: '藍', shu: '朱', midori: '深緑', karashi: '芥子', budou: '葡萄' };
@@ -53,30 +53,32 @@ export async function renderPrint({ id }) {
   });
   const undoStack = [];
   const redoStack = [];
-  let lastHistoryAt = 0;
+  let lastMerge = { key: null, at: 0 };
   /**
    * @param {object} next
-   * @param {{ rebuild?: boolean, history?: boolean|'merge', animate?: boolean }} opts
-   *   history 'merge' は直前 800ms 以内の変更と 1 手にまとめる（矢印キー連打・文字入力）
+   * @param {{ rebuild?: boolean, history?: boolean|string, animate?: boolean }} opts
+   *   history に文字列を渡すと「同じキーの変更が 800ms 以内に続いた場合だけ」1 手にまとめる（矢印キー連打・文字入力）
    */
   const commit = (next, { rebuild = true, history = true, animate = false } = {}) => {
     if (!alive) return;
     if (history) {
       const now = Date.now();
-      if (!(history === 'merge' && now - lastHistoryAt < 800)) {
+      const key = typeof history === 'string' ? history : null;
+      const merge = key && key === lastMerge.key && now - lastMerge.at < 800;
+      if (!merge) {
         undoStack.push(trip);
         if (undoStack.length > HISTORY_MAX) undoStack.shift();
         redoStack.length = 0;
       }
-      lastHistoryAt = now;
+      lastMerge = { key, at: now };
     }
     trip = next;
     save(trip);
     if (rebuild) build({ animate });
     else updateHistoryButtons();
   };
-  function undo() { if (!undoStack.length) return; redoStack.push(trip); trip = undoStack.pop(); save(trip); build({ animate: true }); }
-  function redo() { if (!redoStack.length) return; undoStack.push(trip); trip = redoStack.pop(); save(trip); build({ animate: true }); }
+  function undo() { if (!undoStack.length) return; redoStack.push(trip); trip = undoStack.pop(); lastMerge = { key: null, at: 0 }; save(trip); build({ animate: true }); }
+  function redo() { if (!redoStack.length) return; undoStack.push(trip); trip = redoStack.pop(); lastMerge = { key: null, at: 0 }; save(trip); build({ animate: true }); }
   const undoBtn = h('button', { class: 'btn btn--ghost btn--sm', type: 'button', title: '取り消し（Ctrl+Z）', disabled: true, onclick: undo }, '↶');
   const redoBtn = h('button', { class: 'btn btn--ghost btn--sm', type: 'button', title: 'やり直し（Ctrl+Y）', disabled: true, onclick: redo }, '↷');
   function updateHistoryButtons() { undoBtn.disabled = undoStack.length === 0; redoBtn.disabled = redoStack.length === 0; }
@@ -97,6 +99,7 @@ export async function renderPrint({ id }) {
           doc.body.style.background = '#fff'; doc.body.style.color = '#000';
           doc.querySelectorAll('.slot--empty, .guide').forEach((n) => n.remove());
           doc.querySelector('.sheet')?.classList.remove('sheet--layout');
+          doc.querySelectorAll('.slot--selected, .block--active').forEach((n) => n.classList.remove('slot--selected', 'block--active'));
         } });
       const blob = await new Promise((r) => canvas.toBlob(r, 'image/png'));
       const a = document.createElement('a');
@@ -142,8 +145,9 @@ export async function renderPrint({ id }) {
         onchange: (e) => {
           if (!g) return;
           const isMap = activeBlock === 'map';
-          commit(M.setBlock(trip, tpl, activeBlock, { ...g, [key]: Number(e.target.value) }), { rebuild: isMap, history: 'merge' });
-          if (!isMap) { applyLayout(sheet, M.resolveLayout(trip, tpl)); renderPanel(); }
+          const captionChanged = activeBlock.startsWith('slot-') && captionForWidth(g.w) !== captionForWidth(Number(key === 'w' ? e.target.value : g.w));
+          commit(M.setBlock(trip, tpl, activeBlock, { ...g, [key]: Number(e.target.value) }), { rebuild: isMap || captionChanged, history: `num:${activeBlock}:${key}` });
+          if (!isMap && !captionChanged) { applyLayout(sheet, M.resolveLayout(trip, tpl)); renderPanel(); }
         } }));
 
     panel.replaceChildren(
@@ -168,9 +172,9 @@ export async function renderPrint({ id }) {
         ...M.FONTS.map((f) => h('button', { class: 'chip', type: 'button', 'aria-pressed': String(f === trip.theme.font),
           onclick: () => commit(M.touch({ ...trip, theme: { ...trip.theme, font: f } })) }, FONT_LABELS[f])))),
       field('タイトル', h('input', { type: 'text', class: 'input', value: trip.title, placeholder: '旅の記録',
-        oninput: (e) => { commit(M.touch({ ...trip, title: e.target.value }), { rebuild: false, history: 'merge' }); patchText(); } })),
+        oninput: (e) => { commit(M.touch({ ...trip, title: e.target.value }), { rebuild: false, history: 'title' }); patchText(); } })),
       field('サブタイトル', h('input', { type: 'text', class: 'input', value: trip.subtitle, placeholder: '例：家族で、春の京都',
-        oninput: (e) => { commit(M.touch({ ...trip, subtitle: e.target.value }), { rebuild: false, history: 'merge' }); patchText(); } })),
+        oninput: (e) => { commit(M.touch({ ...trip, subtitle: e.target.value }), { rebuild: false, history: 'subtitle' }); patchText(); } })),
       h('label', { class: 'check' }, h('input', { type: 'checkbox', checked: trip.showDates,
         onchange: (e) => commit(M.touch({ ...trip, showDates: e.target.checked })) }), ' 期間を表示'),
       field('地図', h('div', { class: 'choice-row' },
@@ -264,13 +268,17 @@ export async function renderPrint({ id }) {
 
   function build({ animate = false } = {}) {
     const before = animate ? snapshotRects() : new Map();
+    hideGhost(); dragMoved = false; // ドラッグ中に build（Ctrl+Z など）されても残骸を残さない
     if (map) { map.destroy(); map = null; }
     const tpl = getTemplate(trip.templateId);
+    if (selectedSlot != null && selectedSlot >= tpl.photoSlots) selectedSlot = null;
+    if (activeBlock && !tpl.blocks.some((b) => b.id === activeBlock)) activeBlock = null;
     const slots = M.resolveSlots(trip, tpl);
     sheet = buildSheet(trip, tpl, slots, photoUrl);
     pageStyle.textContent = `@page { size: A4 ${tpl.orientation}; margin: 0; }`;
     viewport.replaceChildren(sheet);
     fitScale();
+    fitOverflow(sheet); // 地点一覧・タイムラインが溢れたら縮めて「他 n 地点」に寄せる
     playFlip(before);
 
     // 地図（別インスタンス・操作無効）
@@ -279,7 +287,7 @@ export async function renderPrint({ id }) {
     pngBtn.disabled = true;
     const seq = ++buildSeq;
     if (mapEl) {
-      map = createMap(mapEl, { style: trip.mapStyle, interactive: false, color: getComputedStyle(sheet).getPropertyValue('--sheet-accent').trim() || undefined });
+      map = createMap(mapEl, { style: trip.mapStyle, interactive: false, canvas: true, color: getComputedStyle(sheet).getPropertyValue('--sheet-accent').trim() || undefined });
       map.setVisits(trip.visits, { routeOf: (a, b) => M.routeLine(trip, a, b) });
       const ready = Promise.all([map.whenTilesLoaded(), document.fonts.ready]);
       const timeout = new Promise((r) => setTimeout(() => r('timeout'), 10000));
@@ -493,9 +501,10 @@ export async function renderPrint({ id }) {
       showGuides([]);
       if (cur.x === g.x && cur.y === g.y && cur.w === g.w && cur.h === g.h) return;
       const isMap = node.dataset.block === 'map';
-      // 地図はサイズ変更後に作り直す（Leaflet のサイズ再計算）。それ以外はインライン配置のまま保存だけ
-      commit(M.setBlock(trip, tpl, node.dataset.block, cur), { rebuild: isMap });
-      if (!isMap) renderPanel();
+      const captionChanged = node.classList.contains('slot') && captionForWidth(g.w) !== captionForWidth(cur.w);
+      // 地図はサイズ変更後に作り直す（Leaflet のサイズ再計算）。キャプション種別が変わる幅なら再構築。それ以外は配置の保存だけ
+      commit(M.setBlock(trip, tpl, node.dataset.block, cur), { rebuild: isMap || captionChanged });
+      if (!isMap && !captionChanged) { fitOverflow(sheet); renderPanel(); }
     };
     node.addEventListener('pointerup', end);
     node.addEventListener('pointercancel', end);
@@ -523,7 +532,7 @@ export async function renderPrint({ id }) {
     e.preventDefault();
     const tpl = getTemplate(trip.templateId);
     const g = M.resolveLayout(trip, tpl)[activeBlock];
-    commit(M.setBlock(trip, tpl, activeBlock, { ...g, x: g.x + d[0], y: g.y + d[1] }), { rebuild: false, history: 'merge' });
+    commit(M.setBlock(trip, tpl, activeBlock, { ...g, x: g.x + d[0], y: g.y + d[1] }), { rebuild: false, history: `arrow:${activeBlock}` });
     applyLayout(sheet, M.resolveLayout(trip, tpl));
     renderPanel();
   }
@@ -561,5 +570,6 @@ export async function renderPrint({ id }) {
     ro.disconnect();
     if (map) map.destroy();
     for (const u of urls.values()) URL.revokeObjectURL(u);
+    return save.flush();
   };
 }

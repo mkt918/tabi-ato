@@ -7,7 +7,7 @@
 import { store } from './store.js';
 import * as M from './model.js';
 import { createMap } from './map.js';
-import { TEMPLATE_LIST, getTemplate, buildSheet } from './templates.js';
+import { TEMPLATE_LIST, getTemplate, buildSheet, applyLayout } from './templates.js';
 import { root, h, toast, makeSaver } from './ui.js';
 
 const ACCENT_LABELS = { ai: '藍', shu: '朱', midori: '深緑', karashi: '芥子', budou: '葡萄' };
@@ -70,14 +70,26 @@ export async function renderPrint({ id }) {
 
   // -- 調整パネル
   let selectedSlot = null;
+  let layoutMode = false; // レイアウト調整：ブロックの移動・リサイズ（写真の選択・位置調整は無効）
   const panel = h('aside', { class: 'print-panel' });
 
   function renderPanel() {
     const tpl = getTemplate(trip.templateId);
     const slots = M.resolveSlots(trip, tpl);
     const inSlot = new Set(slots.filter(Boolean));
+    const customized = !!trip.layout?.[tpl.id];
 
     panel.replaceChildren(
+      h('div', { class: 'field layout-field' },
+        h('label', { class: 'check' }, h('input', { type: 'checkbox', checked: layoutMode,
+          onchange: (e) => { layoutMode = e.target.checked; selectedSlot = null; build(); } }), ' レイアウト調整'),
+        h('p', { class: 'hint' }, layoutMode
+          ? 'ブロックをドラッグで移動、右下の四角で大きさを変えます（1mm 単位、用紙の中だけ）。'
+          : 'オンにすると、タイトル・地図・地点一覧・写真枠の位置と大きさを変えられます。'),
+        customized ? h('button', { class: 'btn btn--sm', type: 'button', onclick: () => {
+          if (confirm('このテンプレートの配置を初期状態に戻します。よろしいですか？')) commit(M.resetLayout(trip, tpl));
+        } }, 'テンプレの初期配置に戻す') : null,
+      ),
       field('テンプレート', h('div', { class: 'choice-row' },
         ...TEMPLATE_LIST.map((t) => h('button', { class: 'chip', type: 'button', 'aria-pressed': String(t.id === trip.templateId),
           onclick: () => { selectedSlot = null; commit(M.touch({ ...trip, templateId: t.id })); } }, t.name)))),
@@ -172,6 +184,13 @@ export async function renderPrint({ id }) {
       document.fonts.ready.then(() => { if (seq === buildSeq) { printBtn.disabled = false; pngBtn.disabled = false; } });
     }
 
+    if (layoutMode) {
+      sheet.classList.add('sheet--layout');
+      sheet.querySelectorAll(':scope > [data-block]').forEach((node) => attachBlockDrag(node, tpl));
+      renderPanel();
+      return;
+    }
+
     // スロット選択・入替
     sheet.querySelectorAll('.slot').forEach((fig) => {
       const i = Number(fig.dataset.slot);
@@ -222,6 +241,49 @@ export async function renderPrint({ id }) {
     };
     img.addEventListener('pointerup', end);
     img.addEventListener('pointercancel', end);
+  }
+
+  // レイアウト調整：ブロックのドラッグ移動・右下ハンドルでリサイズ
+  function attachBlockDrag(node, tpl) {
+    const HANDLE = 6; // mm
+    let st = null;
+    node.addEventListener('pointerdown', (e) => {
+      if (e.button !== 0) return;
+      const g = M.resolveLayout(trip, tpl)[node.dataset.block];
+      const scale = Number(viewport.style.getPropertyValue('--sheet-scale')) || 1;
+      const r = node.getBoundingClientRect();
+      const mmX = (e.clientX - r.left) / (MM * scale);
+      const mmY = (e.clientY - r.top) / (MM * scale);
+      const resize = mmX > g.w - HANDLE && mmY > g.h - HANDLE;
+      st = { x: e.clientX, y: e.clientY, g, scale, resize, cur: g };
+      sheet.querySelectorAll('.block--active').forEach((x) => x.classList.remove('block--active'));
+      node.classList.add('block--active');
+      node.setPointerCapture(e.pointerId);
+      e.preventDefault();
+      e.stopPropagation();
+    });
+    node.addEventListener('pointermove', (e) => {
+      if (!st) return;
+      const dx = (e.clientX - st.x) / (MM * st.scale);
+      const dy = (e.clientY - st.y) / (MM * st.scale);
+      const next = st.resize
+        ? { ...st.g, w: st.g.w + dx, h: st.g.h + dy }
+        : { ...st.g, x: st.g.x + dx, y: st.g.y + dy };
+      st.cur = M.clampBlock(next, tpl.orientation);
+      applyLayout(sheet, { [node.dataset.block]: st.cur });
+    });
+    const end = () => {
+      if (!st) return;
+      const { cur, g } = st;
+      st = null;
+      if (cur.x === g.x && cur.y === g.y && cur.w === g.w && cur.h === g.h) return;
+      const isMap = node.classList.contains('sheet__map');
+      // 地図はサイズ変更後に作り直す（Leaflet のサイズ再計算）。それ以外はインライン配置のまま保存だけ
+      commit(M.setBlock(trip, tpl, node.dataset.block, cur), { rebuild: isMap });
+      if (!isMap) renderPanel();
+    };
+    node.addEventListener('pointerup', end);
+    node.addEventListener('pointercancel', end);
   }
 
   function fitScale() {

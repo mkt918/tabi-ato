@@ -36,6 +36,7 @@ export function createTrip(partial = {}) {
     routing: partial.routing === 'straight' ? 'straight' : 'road',  // 線を道なりにするか
     routes: { ...(partial.routes ?? {}) },      // { [segmentKey]: [[lat,lng],...] | null(取得失敗) }
     slots: { ...(partial.slots ?? {}) },        // { [templateId]: (photoId|null)[] } 写真スロット割当
+    layout: { ...(partial.layout ?? {}) },      // { [templateId]: { [blockId]: {x,y,w,h} } } 自由配置（mm）
     photoPos: { ...(partial.photoPos ?? {}) },  // { [photoId]: { x, y } } object-position（%）
     visits: normalizeOrder(partial.visits ?? []),
     createdAt: partial.createdAt ?? now,
@@ -273,4 +274,43 @@ export function routeLine(trip, from, to) {
 /** 道なりにできなかった区間数（取得失敗＝null） */
 export function failedRouteCount(trip) {
   return segments(trip).filter((s) => trip.routes?.[s.key] === null).length;
+}
+
+// ---- 自由配置（A4 上のブロック、単位 mm）------------------------------------
+
+export const SHEET_MM = { portrait: { w: 210, h: 297 }, landscape: { w: 297, h: 210 } };
+export const BLOCK_MIN = 10;
+
+/** 用紙内に収まるよう丸めて補正した {x,y,w,h} */
+export function clampBlock(g, orientation) {
+  const S = SHEET_MM[orientation] || SHEET_MM.portrait;
+  const num = (v, d) => (Number.isFinite(Number(v)) ? Math.round(Number(v)) : d);
+  let w = Math.max(BLOCK_MIN, Math.min(S.w, num(g.w, BLOCK_MIN)));
+  let h = Math.max(BLOCK_MIN, Math.min(S.h, num(g.h, BLOCK_MIN)));
+  let x = Math.max(0, Math.min(S.w - w, num(g.x, 0)));
+  let y = Math.max(0, Math.min(S.h - h, num(g.y, 0)));
+  return { x, y, w, h };
+}
+
+/** テンプレの初期配置に保存済みの配置を重ねた { [blockId]: {x,y,w,h} } */
+export function resolveLayout(trip, tpl) {
+  const saved = trip.layout?.[tpl.id] || {};
+  const out = {};
+  for (const b of tpl.blocks) {
+    const g = saved[b.id] && typeof saved[b.id] === 'object' ? saved[b.id] : b;
+    out[b.id] = clampBlock(g, tpl.orientation);
+  }
+  return out;
+}
+
+export function setBlock(trip, tpl, blockId, geom) {
+  if (!tpl.blocks.some((b) => b.id === blockId)) return trip;
+  const cur = { ...(trip.layout?.[tpl.id] || {}), [blockId]: clampBlock(geom, tpl.orientation) };
+  return touch({ ...trip, layout: { ...trip.layout, [tpl.id]: cur } });
+}
+
+export function resetLayout(trip, tpl) {
+  const layout = { ...trip.layout };
+  delete layout[tpl.id];
+  return touch({ ...trip, layout });
 }

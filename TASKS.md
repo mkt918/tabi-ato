@@ -51,9 +51,9 @@
 
 | # | 内容 | 完了条件 | 触ってよいファイル | 状態 |
 |---|---|---|---|---|
-| 23 | テンプレ定義にブロック初期配置（mm）を持たせ、print.css を絶対配置に置き換え。`Trip.layout` と model の `resolveLayout` ＋ tests | 3 テンプレの見た目が現状と同等。tests 追加 | js/templates.js, js/model.js, css/print.css, js/tests.js | 未 |
-| 24 | 印刷ビュー「レイアウト調整」：ブロックのドラッグ移動・角リサイズ・1mm スナップ・用紙内制限・初期配置に戻す | 移動・リサイズが保存され、リロード後も維持。印刷に枠やハンドルが出ない | js/print-view.js, css/print.css, css/style.css | 未 |
-| 25 | 受け入れ＋公開（push） | tests 全通過、公開 URL で A・B が動く | — | 未 |
+| 23 | テンプレ定義にブロック初期配置（mm）を持たせ、print.css を絶対配置に置き換え。`Trip.layout` と model の `resolveLayout` ＋ tests | 3 テンプレの見た目が現状と同等。tests 追加 | js/templates.js, js/model.js, css/print.css, js/tests.js | 完了(2026-09-21) |
+| 24 | 印刷ビュー「レイアウト調整」：ブロックのドラッグ移動・角リサイズ・1mm スナップ・用紙内制限・初期配置に戻す | 移動・リサイズが保存され、リロード後も維持。印刷に枠やハンドルが出ない | js/print-view.js, css/print.css, css/style.css | 完了(2026-09-21) |
+| 25 | 受け入れ＋公開（push） | tests 全通過、公開 URL で A・B が動く | — | 完了(2026-09-21) |
 
 ## Phase 4 その他（都度判断）
 - Canva 連携／クラウド同期／EXIF 回転補正（崩れたら）

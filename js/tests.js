@@ -212,6 +212,33 @@ export async function run() {
       assert(sheet.querySelectorAll('.slot--empty').length === expected);
     });
   }
+  await test('layout: 初期配置は用紙内、保存値で上書き、範囲外は補正、reset で戻る', () => {
+    for (const tpl of TEMPLATE_LIST) {
+      const S = M.SHEET_MM[tpl.orientation];
+      for (const b of tpl.blocks) assert(b.x >= 0 && b.y >= 0 && b.x + b.w <= S.w && b.y + b.h <= S.h, `${tpl.id}/${b.id} が用紙外`);
+      const ids = new Set(tpl.blocks.map((b) => b.id));
+      assert(ids.size === tpl.blocks.length, 'ブロック id 重複');
+    }
+    const tpl = getTemplate('map-hero');
+    let t = M.createTrip({ id: 'l' });
+    eq(M.resolveLayout(t, tpl).map, { x: 12, y: 34, w: 186, h: 152 });
+    t = M.setBlock(t, tpl, 'map', { x: 20, y: 40, w: 100, h: 100 });
+    eq(M.resolveLayout(t, tpl).map, { x: 20, y: 40, w: 100, h: 100 });
+    t = M.setBlock(t, tpl, 'map', { x: 300, y: -5, w: 5, h: 999 });
+    eq(M.resolveLayout(t, tpl).map, { x: 200, y: 0, w: 10, h: 297 });
+    assert(M.setBlock(t, tpl, 'nope', { x: 0, y: 0, w: 10, h: 10 }) === t, '未知のブロックは無視');
+    t = M.resetLayout(t, tpl);
+    eq(M.resolveLayout(t, tpl).map, { x: 12, y: 34, w: 186, h: 152 });
+  });
+  await test('templates: 全ブロックが data-block を持ち mm で配置される', () => {
+    for (const tpl of TEMPLATE_LIST) {
+      const t = M.createTrip({ id: 'tb', visits: [v({ id: 'a' })] });
+      const sheet = buildSheet(t, tpl, M.resolveSlots(t, tpl), () => null);
+      const nodes = [...sheet.querySelectorAll(':scope > [data-block]')];
+      eq(nodes.map((n) => n.dataset.block).sort(), tpl.blocks.map((b) => b.id).sort(), tpl.id);
+      assert(nodes.every((n) => /mm$/.test(n.style.left) && /mm$/.test(n.style.height)), 'mm 配置なし');
+    }
+  });
   await test('templates: 写真ありで img が入り、超過地点は「他 n 地点」', () => {
     const many = M.createTrip({ id: 'tm', visits: Array.from({ length: 15 }, (_, i) => v({ id: 'v' + i, order: i, name: 'n' + i })) });
     const tpl = getTemplate('map-hero');

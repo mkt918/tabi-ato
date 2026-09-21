@@ -12,7 +12,7 @@
 
 ## 現在の状況（2026-09-21）
 
-**Phase 1〜3 完了・公開済み（2026-09-21）。** 進捗の正本は `TASKS.md`。Phase 4 は都度判断。
+**Phase 1〜3 ＋ Phase 4-A（道なりルート）・4-B（自由配置）完了・公開済み（2026-09-21）。** 進捗の正本は `TASKS.md`。残る Phase 4（Canva 連携・クラウド同期）は都度判断。
 
 ---
 
@@ -112,9 +112,8 @@ Export { version: 1, exportedAt, trips: Trip[], photos: { [id]: { mime, base64, 
 | `photo-grid` | フォト多め | 縦 | 上1/3に小さめ地図、下に写真6枚グリッド（各写真に地名キャプション） |
 | `route-timeline` | 横長ルート | 横 | 左半分に地図、右半分に日付ごとの縦タイムライン（地名・コメント・小写真） |
 
-テンプレは `templates.js` に **スロット定義**として持つ（`{ id, name, orientation, photoSlots, textSlots }`）。
-A4 DOM はこの定義からテンプレ側の関数で組み立て、見た目は `print.css` の `.tpl-<id>` で切り替える。
-この分離が Phase 4（自由配置）への足場になる：スロットの位置/サイズを「固定CSS」から「保存された座標」に置き換えるだけで済むようにしておく。
+テンプレは `templates.js` に **スロット定義＋ブロック初期配置（mm）**として持つ（`{ id, name, orientation, photoSlots, blocks }`）。
+A4 DOM はこの定義からテンプレ側の関数で組み立て、各ブロックは `Trip.layout[templateId]`（無ければ `blocks` の初期値）で絶対配置される（Phase 4-B で実装済み）。
 
 ### 軽い調整（Phase 2 で対応）
 - テンプレ切替、写真のスロット割当（クリックで入替）、写真の見せ位置（`object-position` を上下/左右にずらす）

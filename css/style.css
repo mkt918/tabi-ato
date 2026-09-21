@@ -247,3 +247,4 @@ button { cursor: pointer; }
   background: var(--color-paper); border: var(--rule-hair) solid var(--color-rule-strong); font-size: var(--text-xs); color: var(--color-ink-2);
   box-shadow: var(--shadow-card); max-width: min(80%, 360px);
 }
+.layout-field { padding-bottom: var(--space-xs); border-bottom: var(--rule-hair) solid var(--color-rule); }

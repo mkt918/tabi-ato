@@ -77,7 +77,7 @@ export async function renderSettings() {
       ),
       h('section', { class: 'card' },
         h('h2', { class: 'card__title' }, 'このサイトについて'),
-        h('p', {}, '地図：© OpenStreetMap contributors、© CARTO。場所検索：Nominatim。写真・データは外部へ送信しません。'),
+        h('p', {}, '地図：国土地理院（淡色地図）、© OpenStreetMap contributors（OSMFJ タイル・標準タイル）。場所検索：Nominatim。写真・データは外部へ送信しません。'),
       ),
     ),
   );

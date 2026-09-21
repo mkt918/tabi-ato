@@ -5,7 +5,10 @@
 
 export const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 export const TRANSPORTS = ['walk', 'car', 'train', 'bus', 'plane', 'ship'];
-export const MAP_STYLES = ['osm', 'positron'];
+export const MAP_STYLES = ['pale', 'bright', 'osm'];
+export const MAP_STYLE_LABELS = { pale: '淡色', bright: '明るい', osm: '標準' };
+/** 旧値（CARTO Positron）を新しい既定へ */
+const LEGACY_MAP_STYLES = { positron: 'pale' };
 export const TEMPLATE_IDS = ['map-hero', 'photo-grid', 'route-timeline'];
 export const ACCENTS = ['ai', 'shu', 'midori', 'karashi', 'budou'];
 export const FONTS = ['gothic', 'mincho', 'hand'];
@@ -30,7 +33,7 @@ export function createTrip(partial = {}) {
     endDate: partial.endDate ?? partial.startDate ?? today(),
     templateId: partial.templateId ?? 'map-hero',
     theme: { accent: partial.theme?.accent ?? 'ai', font: partial.theme?.font ?? 'gothic' },
-    mapStyle: partial.mapStyle ?? 'positron',
+    mapStyle: LEGACY_MAP_STYLES[partial.mapStyle] ?? partial.mapStyle ?? 'pale',
     showDates: partial.showDates ?? true,
     subtitle: partial.subtitle ?? '',
     routing: partial.routing === 'straight' ? 'straight' : 'road',  // 線を道なりにするか

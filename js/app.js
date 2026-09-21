@@ -338,7 +338,7 @@ async function renderEdit({ id }) {
   const mapEl = h('div', { class: 'map', id: 'map' });
   const styleBtns = {};
   const styleCtl = h('div', { class: 'map-style' },
-    ...[['positron', '淡色'], ['osm', '標準']].map(([val, label]) =>
+    ...M.MAP_STYLES.map((val) => [val, M.MAP_STYLE_LABELS[val]]).map(([val, label]) =>
       (styleBtns[val] = h('button', { class: 'map-style__btn', type: 'button', 'aria-pressed': String(trip.mapStyle === val),
         onclick: () => { commit(M.touch({ ...trip, mapStyle: val })); map.setStyle(val);
           for (const [k, b] of Object.entries(styleBtns)) b.setAttribute('aria-pressed', String(k === val)); } }, label))));

@@ -77,7 +77,8 @@
 - **ジオコーディング**：Nominatim（`https://nominatim.openstreetmap.org/search?format=jsonv2&q=…&accept-language=ja&countrycodes=jp`）。
   利用規約により **1リクエスト/秒以下・自動連打禁止**。入力確定（Enter or 600ms無入力）でのみ問い合わせ、同一クエリはキャッシュ。
   国内旅行が主なので `countrycodes=jp` を既定、設定で外せるようにする
-- **地図タイル**：OSM 標準 ＋ 淡色（CartoDB Positron、帰属表示必須）。印刷では淡色の方が写真・文字が映える
+- **地図タイル**：淡色＝国土地理院 淡色地図（国内のみ、印刷向き・既定）／明るい＝OSM Japan Bright（世界対応・日本語ラベル）／標準＝OSM。いずれも API キー不要・帰属表示必須。
+  ~~CartoDB Positron~~ は 2026-09 に API キー必須となりタイルに「API KEY REQUIRED」が出るため置き換えた（旧データの `positron` は読み出し時に `pale` へ変換）
 - **写真**：IndexedDB に Blob で保存。読み込み時に長辺1600pxへ縮小するので、1旅20枚でも数MBに収まる
 
 ### データモデル（`model.js` が正本）

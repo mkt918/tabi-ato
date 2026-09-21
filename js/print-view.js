@@ -107,7 +107,7 @@ export async function renderPrint({ id }) {
       h('label', { class: 'check' }, h('input', { type: 'checkbox', checked: trip.showDates,
         onchange: (e) => commit(M.touch({ ...trip, showDates: e.target.checked })) }), ' 期間を表示'),
       field('地図', h('div', { class: 'choice-row' },
-        ...[['positron', '淡色'], ['osm', '標準']].map(([val, label]) => h('button', { class: 'chip', type: 'button', 'aria-pressed': String(val === trip.mapStyle),
+        ...M.MAP_STYLES.map((val) => [val, M.MAP_STYLE_LABELS[val]]).map(([val, label]) => h('button', { class: 'chip', type: 'button', 'aria-pressed': String(val === trip.mapStyle),
           onclick: () => commit(M.touch({ ...trip, mapStyle: val })) }, label)))),
       field(`写真（${tpl.photoSlots} 枠）`, h('div', {},
         h('p', { class: 'hint' }, selectedSlot == null

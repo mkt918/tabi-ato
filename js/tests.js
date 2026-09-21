@@ -34,7 +34,8 @@ export async function run() {
   await test('createTrip: 既定値と visits の order 振り直し', () => {
     const t = M.createTrip({ visits: [v({ id: 'a', order: 5 }), v({ id: 'b', order: 2 })] });
     eq(t.visits.map((x) => [x.id, x.order]), [['b', 0], ['a', 1]]);
-    assert(t.templateId === 'map-hero' && t.mapStyle === 'positron');
+    assert(t.templateId === 'map-hero' && t.mapStyle === 'pale');
+    assert(M.createTrip({ mapStyle: 'positron' }).mapStyle === 'pale', '旧 positron は pale へ');
   });
   await test('addVisit: 末尾に追加され order が 0..n-1', () => {
     let t = M.createTrip();

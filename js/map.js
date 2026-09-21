@@ -3,16 +3,22 @@
  * L はグローバル（index.html で cdnjs から読み込み）。
  */
 
+// CARTO Positron は 2026-09 から API キー必須になった（タイルに「API KEY REQUIRED」が焼き込まれる）ため使わない。
+// いずれも API キー不要・CORS 許可あり（html2canvas の useCORS で読める）。
 export const TILES = {
+  pale: {  // 国土地理院 淡色地図（国内のみ。印刷向き）
+    url: 'https://cyberjapandata.gsi.go.jp/xyz/pale/{z}/{x}/{y}.png',
+    attribution: '<a href="https://maps.gsi.go.jp/development/ichiran.html">国土地理院</a>',
+    maxZoom: 18,
+  },
+  bright: {  // OSM Japan の Bright（世界対応・日本語ラベル）
+    url: 'https://tile.openstreetmap.jp/styles/osm-bright-ja/{z}/{x}/{y}.png',
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, <a href="https://osm.jp/">OSMFJ</a>',
+    maxZoom: 18,
+  },
   osm: {
     url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-    maxZoom: 19,
-  },
-  positron: {
-    url: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-    subdomains: 'abcd',
     maxZoom: 19,
   },
 };
@@ -58,7 +64,7 @@ export function createMap(el, opts = {}) {
   let markers = new Map();
 
   function setStyle(style) {
-    const def = TILES[style] || TILES.positron;
+    const def = TILES[style] || TILES.pale;
     if (tileLayer) tileLayer.remove();
     tilesLoaded = false;
     tileErrors = 0;
@@ -128,7 +134,7 @@ export function createMap(el, opts = {}) {
     map.on('click', (e) => opts.onClick({ lat: e.latlng.lat, lng: e.latlng.lng }));
   }
 
-  setStyle(opts.style || 'positron');
+  setStyle(opts.style || 'pale');
 
   return {
     leaflet: map,

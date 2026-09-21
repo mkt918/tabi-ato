@@ -1,0 +1,84 @@
+/* Hallmark · macrostructure: Workbench (single-screen app) · genre: playful (quiet) · theme: custom
+ * vibe: 旅のしおり／スタンプ帳 · paper oklch(97% 0.012 85) 生成り · accent oklch(44% 0.085 200) 深い青緑
+ * display: system sans (UI) · body: system sans · light theme only (要件)
+ * axes: light / grotesk-sans / cool · enrichment: none · nav: N1a (アプリ・戻るのみ) · footer: none
+ * pre-emit critique: P4 H4 E4 S4 R5 V4
+ */
+
+:root {
+  color-scheme: light;
+
+  /* ---- フォント（画面UI。印刷テンプレのフォントは print.css 側で切替） ---- */
+  --font-display: "Segoe UI Variable Display", "Segoe UI", "Hiragino Sans",
+                  "Yu Gothic UI", "Noto Sans JP", system-ui, sans-serif;
+  --font-body:    "Segoe UI", "Hiragino Sans", "Yu Gothic UI",
+                  "Noto Sans JP", system-ui, sans-serif;
+  --font-mono:    "Cascadia Mono", Consolas, Menlo, "BIZ UDGothic", monospace;
+
+  /* ---- 紙とインク：生成りの地。純白・純黒は使わない ---- */
+  --color-paper:    oklch(97% 0.012 85);
+  --color-paper-2:  oklch(94.5% 0.016 85);
+  --color-paper-3:  oklch(90.5% 0.020 85);
+
+  --color-ink:      oklch(24% 0.016 70);
+  --color-ink-2:    oklch(42% 0.018 70);
+  --color-ink-3:    oklch(54% 0.016 70);
+
+  --color-rule:        oklch(86% 0.016 85);
+  --color-rule-strong: oklch(72% 0.020 80);
+
+  /* ---- アクセント：深い青緑 1 色のトーンランプ ---- */
+  --color-accent:       oklch(44% 0.085 200);  /* 主ボタン・ピン（白文字と 7.5:1） */
+  --color-accent-deep:  oklch(36% 0.080 200);  /* 押下 */
+  --color-accent-soft:  oklch(78% 0.060 200);  /* ルート線の淡色・選択枠 */
+  --color-accent-pale:  oklch(90% 0.035 200);  /* 選択行の地 */
+  --color-accent-tint:  oklch(95% 0.018 200);  /* ホバーの地 */
+  --color-accent-ink:   oklch(99% 0.005 90);   /* アクセント上の文字 */
+
+  /* ---- 状態 ---- */
+  --color-focus:   oklch(50% 0.16 250);
+  --color-ok:      oklch(44% 0.11 155);
+  --color-ok-soft: oklch(92% 0.05 155);
+  --color-danger:  oklch(52% 0.16 25);
+  --color-danger-soft: oklch(94% 0.04 25);
+
+  /* ---- タイプスケール ---- */
+  --text-xs:  0.75rem;
+  --text-sm:  0.875rem;
+  --text-md:  1rem;
+  --text-lg:  1.25rem;
+  --text-xl:  1.6rem;
+  --text-2xl: 2.1rem;
+  --text-display: clamp(1.8rem, 3vw + 1rem, 2.6rem);
+  --leading-tight: 1.2;
+  --leading-body:  1.6;
+
+  /* ---- 4pt spacing ---- */
+  --space-3xs: 0.25rem;
+  --space-2xs: 0.5rem;
+  --space-xs:  0.75rem;
+  --space-sm:  1rem;
+  --space-md:  1.5rem;
+  --space-lg:  2rem;
+  --space-xl:  3rem;
+  --space-2xl: 4rem;
+
+  /* ---- 角丸・罫線・影 ---- */
+  --radius-card:  12px;
+  --radius-input: 8px;
+  --radius-pill:  999px;
+  --rule-hair: 1px;
+  --rule-bold: 2px;
+  --shadow-card: 0 6px 20px -14px oklch(40% 0.05 80 / 0.5);
+  --shadow-lift: 0 14px 32px -16px oklch(40% 0.06 80 / 0.6);
+
+  /* ---- モーション ---- */
+  --ease-out:    cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in:     cubic-bezier(0.7, 0, 0.84, 0);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --dur-short: 140ms;
+  --dur-med:   240ms;
+  --dur-long:  520ms;
+
+  --tap: 44px;
+}

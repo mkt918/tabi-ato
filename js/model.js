@@ -1,0 +1,214 @@
+/*
+ * model.js — Trip / Visit の純粋関数。DOM を触らない。
+ * すべて新しいオブジェクトを返す（引数は変更しない）。
+ */
+
+export const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+export const TRANSPORTS = ['walk', 'car', 'train', 'bus', 'plane', 'ship'];
+export const MAP_STYLES = ['osm', 'positron'];
+export const TEMPLATE_IDS = ['map-hero', 'photo-grid', 'route-timeline'];
+export const ACCENTS = ['ai', 'shu', 'midori', 'karashi', 'budou'];
+export const FONTS = ['gothic', 'mincho', 'hand'];
+
+export function uid() {
+  if (globalThis.crypto && crypto.randomUUID) return crypto.randomUUID();
+  return 'id-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 10);
+}
+
+export function today() {
+  const d = new Date();
+  const p = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+}
+
+export function createTrip(partial = {}) {
+  const now = new Date().toISOString();
+  return {
+    id: partial.id || uid(),
+    title: partial.title ?? '',
+    startDate: partial.startDate ?? today(),
+    endDate: partial.endDate ?? partial.startDate ?? today(),
+    templateId: partial.templateId ?? 'map-hero',
+    theme: { accent: partial.theme?.accent ?? 'ai', font: partial.theme?.font ?? 'gothic' },
+    mapStyle: partial.mapStyle ?? 'positron',
+    showDates: partial.showDates ?? true,
+    subtitle: partial.subtitle ?? '',
+    slots: { ...(partial.slots ?? {}) },        // { [templateId]: (photoId|null)[] } 写真スロット割当
+    photoPos: { ...(partial.photoPos ?? {}) },  // { [photoId]: { x, y } } object-position（%）
+    visits: normalizeOrder(partial.visits ?? []),
+    createdAt: partial.createdAt ?? now,
+    updatedAt: partial.updatedAt ?? now,
+  };
+}
+
+export function createVisit(partial = {}) {
+  return {
+    id: partial.id || uid(),
+    order: partial.order ?? 0,
+    date: partial.date ?? today(),
+    name: partial.name ?? '',
+    lat: Number(partial.lat),
+    lng: Number(partial.lng),
+    comment: partial.comment ?? '',
+    photoIds: Array.isArray(partial.photoIds) ? [...partial.photoIds] : [],
+    transport: partial.transport ?? null,
+    photoPos: partial.photoPos ?? null,
+  };
+}
+
+/** order 昇順に並べ、0..n-1 に振り直す（元の配列は変更しない） */
+export function normalizeOrder(visits) {
+  return [...visits]
+    .sort((a, b) => a.order - b.order)
+    .map((v, i) => ({ ...v, order: i }));
+}
+
+export function touch(trip) {
+  return { ...trip, updatedAt: new Date().toISOString() };
+}
+
+export function addVisit(trip, visit) {
+  const v = { ...visit, order: trip.visits.length };
+  return touch({ ...trip, visits: normalizeOrder([...trip.visits, v]) });
+}
+
+export function updateVisit(trip, visitId, patch) {
+  const visits = trip.visits.map((v) => (v.id === visitId ? { ...v, ...patch, id: v.id } : v));
+  return touch({ ...trip, visits: normalizeOrder(visits) });
+}
+
+export function removeVisit(trip, visitId) {
+  return touch({ ...trip, visits: normalizeOrder(trip.visits.filter((v) => v.id !== visitId)) });
+}
+
+/** visitId を toIndex の位置へ移動 */
+export function moveVisit(trip, visitId, toIndex) {
+  const list = normalizeOrder(trip.visits);
+  const from = list.findIndex((v) => v.id === visitId);
+  if (from < 0) return trip;
+  const to = Math.max(0, Math.min(list.length - 1, toIndex));
+  if (from === to) return trip;
+  const [item] = list.splice(from, 1);
+  list.splice(to, 0, item);
+  return touch({ ...trip, visits: list.map((v, i) => ({ ...v, order: i })) });
+}
+
+/** 日付昇順（同日は order 順）の安定ソート */
+export function sortByDate(visits) {
+  return [...visits].sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : a.order - b.order));
+}
+
+/** [{ date, visits }] を日付昇順で返す */
+export function groupByDate(visits) {
+  const map = new Map();
+  for (const v of sortByDate(visits)) {
+    if (!map.has(v.date)) map.set(v.date, []);
+    map.get(v.date).push(v);
+  }
+  return [...map.entries()].map(([date, vs]) => ({ date, visits: vs }));
+}
+
+export function validateVisit(v) {
+  const errors = [];
+  if (!v || typeof v !== 'object') return ['visit が不正です'];
+  if (!DATE_RE.test(v.date || '')) errors.push('日付は YYYY-MM-DD 形式にしてください');
+  if (!(Number.isFinite(v.lat) && v.lat >= -90 && v.lat <= 90)) errors.push('緯度が範囲外です');
+  if (!(Number.isFinite(v.lng) && v.lng >= -180 && v.lng <= 180)) errors.push('経度が範囲外です');
+  if (v.transport != null && !TRANSPORTS.includes(v.transport)) errors.push('移動手段が不正です');
+  return errors;
+}
+
+export function validateTrip(t) {
+  const errors = [];
+  if (!t || typeof t !== 'object') return ['trip が不正です'];
+  if (!t.id) errors.push('id がありません');
+  if (!DATE_RE.test(t.startDate || '')) errors.push('開始日は YYYY-MM-DD 形式にしてください');
+  if (!DATE_RE.test(t.endDate || '')) errors.push('終了日は YYYY-MM-DD 形式にしてください');
+  if (t.startDate && t.endDate && t.startDate > t.endDate) errors.push('終了日が開始日より前です');
+  if (!TEMPLATE_IDS.includes(t.templateId)) errors.push('テンプレが不正です');
+  if (!MAP_STYLES.includes(t.mapStyle)) errors.push('地図スタイルが不正です');
+  if (!ACCENTS.includes(t.theme?.accent)) errors.push('アクセント色が不正です');
+  if (!FONTS.includes(t.theme?.font)) errors.push('フォントが不正です');
+  if (!Array.isArray(t.visits)) errors.push('visits が配列ではありません');
+  else t.visits.forEach((v, i) => validateVisit(v).forEach((e) => errors.push(`地点${i + 1}: ${e}`)));
+  return errors;
+}
+
+/** 表示用：訪問地の日付範囲で旅の期間を補正した文字列 */
+export function formatDateRange(start, end) {
+  const f = (s) => {
+    const [y, m, d] = s.split('-').map(Number);
+    return `${y}年${m}月${d}日`;
+  };
+  if (!start) return '';
+  if (!end || end === start) return f(start);
+  return `${f(start)} 〜 ${f(end)}`;
+}
+
+/** 旅の全写真 id を訪問順に（重複なし） */
+export function allPhotoIds(trip) {
+  const seen = new Set();
+  for (const v of normalizeOrder(trip.visits)) for (const p of v.photoIds) seen.add(p);
+  return [...seen];
+}
+
+/** photoId → それを持つ Visit */
+export function visitOfPhoto(trip, photoId) {
+  return trip.visits.find((v) => v.photoIds.includes(photoId)) || null;
+}
+
+/**
+ * テンプレのスロットに入れる写真 id の配列（長さ = photoSlots、空きは null）。
+ * 保存済みの割当（trip.slots[templateId]）を優先し、存在しない写真は除外。
+ * 保存値 '' は「明示的に空」で自動補充しない。未割当（null）のスロットは
+ * perVisit なら「地点 i の 1 枚目」、それ以外は残りの写真を順に埋める。
+ */
+export function resolveSlots(trip, tpl) {
+  return resolveSlotsDetail(trip, tpl).out;
+}
+
+function resolveSlotsDetail(trip, tpl) {
+  const valid = new Set(allPhotoIds(trip));
+  const saved = trip.slots?.[tpl.id] ?? [];
+  const out = [];
+  const locked = [];
+  for (let i = 0; i < tpl.photoSlots; i++) {
+    const id = saved[i];
+    locked.push(id === '');
+    out.push(id && valid.has(id) ? id : null);
+  }
+  const used = new Set(out.filter(Boolean));
+  const visits = normalizeOrder(trip.visits);
+  if (tpl.perVisit) {
+    for (let i = 0; i < out.length; i++) {
+      if (out[i] || locked[i]) continue;
+      const first = visits[i]?.photoIds.find((p) => !used.has(p));
+      if (first) { out[i] = first; used.add(first); }
+    }
+  } else {
+    const rest = allPhotoIds(trip).filter((p) => !used.has(p));
+    for (let i = 0; i < out.length && rest.length; i++) if (!out[i] && !locked[i]) out[i] = rest.shift();
+  }
+  return { out, locked };
+}
+
+/** 保存用の配列（明示的な空は '' のまま） */
+function storedSlots(trip, tpl) {
+  const { out, locked } = resolveSlotsDetail(trip, tpl);
+  return out.map((p, i) => (locked[i] ? '' : p));
+}
+
+/** スロット a と b の写真を入れ替えた trip を返す */
+export function swapSlots(trip, tpl, a, b) {
+  const cur = storedSlots(trip, tpl);
+  [cur[a], cur[b]] = [cur[b], cur[a]];
+  return touch({ ...trip, slots: { ...trip.slots, [tpl.id]: cur } });
+}
+
+/** スロット index に photoId を入れる（null なら明示的に空にする）。同じ写真が他の枠にあれば外す */
+export function setSlot(trip, tpl, index, photoId) {
+  // 移動元の枠は '' にして自動補充させない（「動かしたら別の写真が入った」を防ぐ）
+  const cur = storedSlots(trip, tpl).map((p) => (photoId && p === photoId ? '' : p));
+  cur[index] = photoId ?? '';
+  return touch({ ...trip, slots: { ...trip.slots, [tpl.id]: cur } });
+}

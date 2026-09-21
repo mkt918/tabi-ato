@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>自己検証 — 旅あと</title>
+<link rel="stylesheet" href="css/tokens.css">
+<link rel="stylesheet" href="css/style.css">
+<style>
+  .tests { max-width: 68ch; margin: 0 auto; padding: var(--space-md) var(--space-sm); display: flex; flex-direction: column; gap: var(--space-md); }
+  .tests__summary { font-family: var(--font-mono); font-size: var(--text-xl); font-weight: 700; margin: 0; }
+  .tests__summary[data-ok="true"]  { color: var(--color-ok); }
+  .tests__summary[data-ok="false"] { color: var(--color-danger); }
+  .tests__list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-2xs); }
+  .tests__item { display: grid; grid-template-columns: 5ch minmax(0, 1fr); gap: var(--space-xs);
+                 padding: var(--space-xs) var(--space-sm); border: var(--rule-hair) solid var(--color-rule);
+                 border-radius: var(--radius-input); background: var(--color-paper-2); }
+  .tests__mark { font-family: var(--font-mono); font-weight: 700; }
+  .tests__item[data-ok="true"]  .tests__mark { color: var(--color-ok); }
+  .tests__item[data-ok="false"] .tests__mark { color: var(--color-danger); }
+  .tests__item[data-ok="false"] { border-color: var(--color-danger); }
+  .tests__detail { display: block; font-family: var(--font-mono); font-size: var(--text-xs); color: var(--color-ink-3); overflow-wrap: anywhere; }
+</style>
+</head>
+<body>
+<main class="tests">
+  <h1 class="topbar__title">自己検証</h1>
+  <p class="tests__summary" id="summary">実行中…</p>
+  <ul class="tests__list" id="list"></ul>
+  <p class="hint">http で開いてください（ES modules と IndexedDB を使います）。テスト用 DB は tabi-ato-test。</p>
+  <a class="btn btn--ghost" href="index.html">← アプリに戻る</a>
+</main>
+<script type="module">
+  import { run } from './js/tests.js';
+  const list = document.getElementById('list');
+  const summary = document.getElementById('summary');
+  try {
+    const results = await run();
+    let pass = 0;
+    for (const r of results) {
+      if (r.ok) pass++;
+      const li = document.createElement('li');
+      li.className = 'tests__item';
+      li.dataset.ok = String(r.ok);
+      const mark = document.createElement('span');
+      mark.className = 'tests__mark';
+      mark.textContent = r.ok ? 'PASS' : 'FAIL';
+      const body = document.createElement('span');
+      body.textContent = r.name;
+      if (!r.ok) {
+        const d = document.createElement('span');
+        d.className = 'tests__detail';
+        d.textContent = r.detail;
+        body.appendChild(d);
+      }
+      li.append(mark, body);
+      list.appendChild(li);
+    }
+    summary.textContent = `${pass} / ${results.length} 通過`;
+    summary.dataset.ok = String(pass === results.length);
+    window.__testResults = results;
+  } catch (e) {
+    summary.textContent = `実行に失敗：${e.message}`;
+    summary.dataset.ok = 'false';
+  }
+</script>
+</body>
+</html>

@@ -37,7 +37,7 @@
 | 16 | 写真の見せ位置のドラッグ調整（object-position） | ドラッグで位置が変わり保存される | js/print-view.js | 完了(2026-09-21) |
 | 17 | 空状態・エラー文言・ローディング表示の整え | 全画面で空状態と失敗時の案内がある | js/*.js | 完了(2026-09-21) |
 | 18 | 検証：Opus サブエージェントによる診断 → 再現する指摘を修正 | 報告と修正結果を TASKS.md 末尾に記録 | 全ファイル | 完了(2026-09-21) |
-| 19 | CP3 公開：git init → gh repo create → GitHub Pages → README に URL | 公開 URL で一通り動く | README.md | 着手 |
+| 19 | CP3 公開：git init → gh repo create → GitHub Pages → README に URL | 公開 URL で一通り動く | README.md | 完了(2026-09-21 https://mkt918.github.io/tabi-ato/) |
 
 ## Phase 4 将来（都度判断）
 - 自由配置編集／道なりルート（OSRM）／Canva 連携／クラウド同期／EXIF 回転補正（崩れたら）

@@ -76,12 +76,39 @@ function slotGrid({ y, h, rows, cols = 3, x = M, width = 210 - M * 2, gap = 4 })
   return out;
 }
 
-function slotFigures(ctx, caption) {
+function slotFigures(ctx, caption, extraClass = '') {
   return ctx.slots.map((_, i) => {
     const fig = ctx.slotFigure(i, { caption });
     fig.dataset.block = `slot-${i}`;
+    if (extraClass) fig.classList.add(extraClass);
     return fig;
   });
+}
+
+/** 任意の矩形リストから slot ブロックを作る */
+function slotsAt(rects) {
+  return rects.map(([x, y, w, h], i) => ({ id: `slot-${i}`, kind: 'slot', slot: i, x, y, w, h }));
+}
+
+const HEAD = { id: 'head', kind: 'head', x: M, y: M, w: 186, h: 18 };
+const mapAt = (x, y, w, h) => ({ id: 'map', kind: 'map', x, y, w, h });
+const legendAt = (x, y, w, h) => ({ id: 'legend', kind: 'legend', x, y, w, h });
+
+/** 縦・写真多めテンプレの共通 build（head / map / legend / slots） */
+function buildPhotoPage(ctx, caption = 'auto', extraClass = '') {
+  return [
+    withBlock(buildHead(ctx), 'head'),
+    withBlock(el('div', { class: 'sheet__map' }), 'map'),
+    withBlock(buildLegend(ctx), 'legend'),
+    ...slotFigures(ctx, caption, extraClass),
+  ];
+}
+
+/** 縦・写真多めテンプレの定義を短く書く */
+function photoTemplate(id, name, blocks, { caption = 'auto', extraClass = '', maxVisits = 10 } = {}) {
+  const photoSlots = blocks.filter((b) => b.kind === 'slot').length;
+  return { id, name, orientation: 'portrait', photoSlots, perVisit: false, maxVisits, textSlots: ['title', 'dates', 'subtitle'], blocks,
+    build(ctx) { return buildPhotoPage(ctx, caption, extraClass); } };
 }
 
 export const TEMPLATES = {
@@ -168,6 +195,54 @@ export const TEMPLATES = {
       return [withBlock(buildHead(ctx), 'head'), withBlock(el('div', { class: 'sheet__map' }), 'map'), withBlock(timeline, 'timeline')];
     },
   },
+
+  // ---- Phase 5：縦・写真多め（配置は blocks が主体。キャプションは枠の幅で自動） ----
+  'collage': photoTemplate('collage', 'コラージュ', [
+    HEAD,
+    ...slotsAt([[M, 34, 120, 90], [136, 34, 62, 43], [136, 81, 62, 43], [M, 128, 91, 108], [107, 128, 91, 108]]),
+    legendAt(M, 240, 122, 45), mapAt(138, 240, 60, 45),
+  ]),
+  'magazine': photoTemplate('magazine', '雑誌風', [
+    HEAD,
+    ...slotsAt([[M, 34, 186, 70], [M, 108, 91, 60], [107, 108, 91, 60], [M, 172, 59, 55], [75, 172, 60, 55], [139, 172, 59, 55]]),
+    legendAt(M, 231, 122, 54), mapAt(138, 231, 60, 54),
+  ]),
+  'album': photoTemplate('album', 'アルバム', [
+    HEAD, mapAt(M, 34, 186, 40), legendAt(M, 78, 186, 14),
+    ...slotsAt([0, 1, 2, 3].flatMap((r) => {
+      const y = 96 + r * 48;
+      return r % 2 === 0 ? [[M, y, 110, 45], [126, y, 72, 45]] : [[M, y, 72, 45], [88, y, 110, 45]];
+    })),
+  ]),
+  'photo-wall': photoTemplate('photo-wall', 'フォトウォール', [
+    HEAD, mapAt(M, 34, 186, 40), legendAt(M, 78, 186, 12),
+    ...slotsAt([0, 1, 2].flatMap((r) => [0, 1, 2].map((c) => [M + c * 63.5, 94 + r * 64, 59, 59]))).map((b) => ({ ...b, x: Math.round(b.x) })),
+  ]),
+  'hero-photo': photoTemplate('hero-photo', '写真メイン', [
+    HEAD,
+    ...slotsAt([[M, 34, 186, 150], [M, 188, 60, 55], [76, 188, 60, 55]]),
+    mapAt(140, 188, 58, 55), legendAt(M, 247, 186, 38),
+  ]),
+  'mosaic': photoTemplate('mosaic', 'モザイク', [
+    HEAD,
+    ...slotsAt([[M, 34, 120, 120], [136, 34, 62, 58], [136, 96, 62, 58], [M, 158, 43, 44], [59, 158, 43, 44], [106, 158, 43, 44], [153, 158, 45, 44]]),
+    legendAt(M, 206, 186, 14), mapAt(M, 224, 186, 61),
+  ]),
+  'stripes': photoTemplate('stripes', '横帯', [
+    { ...HEAD, w: 120, h: 40 }, mapAt(136, M, 62, 40),
+    ...slotsAt([0, 1, 2, 3].map((r) => [M, 56 + r * 52, 186, 48])),
+    legendAt(M, 264, 186, 21),
+  ], { caption: 'name' }),
+  'two-column': photoTemplate('two-column', '2 列', [
+    HEAD, mapAt(M, 34, 90, 200),
+    ...slotsAt([0, 1, 2, 3, 4].map((r) => [106, 34 + r * 41, 92, 37])),
+    legendAt(M, 240, 186, 45),
+  ], { caption: 'name' }),
+  'polaroid': photoTemplate('polaroid', 'ポラロイド', [
+    HEAD,
+    ...slotsAt([0, 1, 2].flatMap((r) => [[20, 34 + r * 74, 86, 70], [104, 34 + r * 74, 86, 70]])),
+    legendAt(M, 256, 122, 29), mapAt(138, 254, 60, 31),
+  ], { caption: 'name', extraClass: 'slot--polaroid' }),
 };
 
 function withBlock(node, id) { node.dataset.block = id; return node; }
@@ -188,9 +263,11 @@ export function getTemplate(id) {
 export function buildSheet(trip, tpl, slots, photoUrl) {
   const visits = [...trip.visits].sort((a, b) => a.order - b.order);
   const shown = visits.slice(0, tpl.maxVisits);
+  const layout = resolveLayout(trip, tpl);
   const ctx = {
     trip, visits, shown, overflow: visits.length - shown.length, slots, photoUrl, el,
     slotFigure(i, { caption = 'name' } = {}) {
+      if (caption === 'auto') caption = captionForWidth(layout[`slot-${i}`]?.w);
       const pid = slots[i] || null;
       const url = pid ? photoUrl(pid) : null;
       const owner = pid ? visitOfPhoto(trip, pid) : null;
@@ -202,7 +279,9 @@ export function buildSheet(trip, tpl, slots, photoUrl) {
       } else {
         fig.append(el('span', { class: 'slot__empty' }, '写真'));
       }
-      if (owner && caption !== 'none') {
+      if (owner && caption === 'no') {
+        fig.append(el('span', { class: 'slot__badge' }, String(owner.order + 1)));
+      } else if (owner && caption !== 'none') {
         const parts = [el('span', { class: 'slot__no' }, String(owner.order + 1)), el('span', { class: 'slot__name' }, owner.name)];
         if (caption === 'name+comment' && owner.comment) parts.push(el('span', { class: 'slot__comment' }, owner.comment));
         fig.append(el('figcaption', { class: 'slot__cap' }, ...parts));
@@ -214,8 +293,16 @@ export function buildSheet(trip, tpl, slots, photoUrl) {
     class: `sheet tpl-${tpl.id} accent-${trip.theme.accent} font-${trip.theme.font}`,
     dataset: { orientation: tpl.orientation },
   }, ...tpl.build(ctx));
-  applyLayout(sheet, resolveLayout(trip, tpl));
+  applyLayout(sheet, layout);
   return sheet;
+}
+
+/** 枠の幅からキャプションの種類を決める：90mm 以上＝地名＋ひとこと、60mm 以上＝地名、それ未満＝番号のみ */
+export function captionForWidth(w) {
+  if (!Number.isFinite(w)) return 'name';
+  if (w >= 90) return 'name+comment';
+  if (w >= 60) return 'name';
+  return 'no';
 }
 
 /** 各ブロックに配置（mm）を当てる */

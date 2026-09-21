@@ -9,7 +9,8 @@ export const MAP_STYLES = ['pale', 'bright', 'osm'];
 export const MAP_STYLE_LABELS = { pale: '淡色', bright: '明るい', osm: '標準' };
 /** 旧値（CARTO Positron）を新しい既定へ */
 const LEGACY_MAP_STYLES = { positron: 'pale' };
-export const TEMPLATE_IDS = ['map-hero', 'photo-grid', 'route-timeline'];
+export const TEMPLATE_IDS = ['map-hero', 'photo-grid', 'route-timeline',
+  'collage', 'magazine', 'album', 'photo-wall', 'hero-photo', 'mosaic', 'stripes', 'two-column', 'polaroid'];
 export const ACCENTS = ['ai', 'shu', 'midori', 'karashi', 'budou'];
 export const FONTS = ['gothic', 'mincho', 'hand'];
 

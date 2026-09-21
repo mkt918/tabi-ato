@@ -55,6 +55,23 @@
 | 24 | 印刷ビュー「レイアウト調整」：ブロックのドラッグ移動・角リサイズ・1mm スナップ・用紙内制限・初期配置に戻す | 移動・リサイズが保存され、リロード後も維持。印刷に枠やハンドルが出ない | js/print-view.js, css/print.css, css/style.css | 完了(2026-09-21) |
 | 25 | 受け入れ＋公開（push） | tests 全通過、公開 URL で A・B が動く | — | 完了(2026-09-21) |
 
+## Phase 4-B 補足 自由配置の操作性
+
+| # | 内容 | 完了条件 | 触ってよいファイル | 状態 |
+|---|---|---|---|---|
+| 32 | 吸着ガイド（3mm）／Ctrl+Z・Y／矢印キー移動／数値入力／「戻す」常時表示 | 各操作が保存され、Ctrl+Z で戻る | js/print-view.js, js/model.js, css/print.css, css/style.css | 完了(2026-09-22) |
+
+## Phase 5 縦長・写真多めテンプレ（README「Phase 5 追加要件」）
+
+| # | 内容 | 完了条件 | 触ってよいファイル | 状態 |
+|---|---|---|---|---|
+| 26 | 共通：小さい枠は番号のみ／大きい枠は地名＋ひとこと（幅で自動）、空枠は印刷・PNG で非表示、ポラロイド用の白フチ・傾きクラス | 既存 3 テンプレでも空枠が印刷に出ない。tests 更新 | js/templates.js, css/print.css, js/tests.js | 完了(2026-09-22) |
+| 27 | テンプレ 9 種追加（collage / magazine / album / photo-wall / hero-photo / mosaic / stripes / two-column / polaroid）— 手本は map-hero、blocks 定義が主体 | 9 種すべて用紙内に収まり tests の blocks 検査を通る | js/templates.js, css/print.css | 完了(2026-09-22) |
+| 28 | テンプレ選択タイル（ミニプレビュー＋名前＋枚数、縦/横で分ける） | 12 種が一覧でき、クリックで切替 | js/print-view.js, css/style.css | 完了(2026-09-22) |
+| 29 | 切替アニメーション（FLIP：写真は photoId、他は block 種類で対応づけ。reduced-motion で無効） | 3 枚 → 6 枚に切り替えると写真が旧位置から新位置へ動く | js/print-view.js, css/print.css | 完了(2026-09-22) |
+| 30 | 写真のドラッグ＆ドロップ入替（枠→枠、バンク→枠。ポインタイベント、スマホ対応。レイアウト調整モード中は無効） | ドロップで入れ替わり保存される | js/print-view.js, css/print.css, css/style.css | 完了(2026-09-22) |
+| 31 | 受け入れ＋公開（push） | tests 全通過、公開 URL で切替・D&D・印刷が動く | — | 完了(2026-09-22) |
+
 ## Phase 4 その他（都度判断）
 - Canva 連携／クラウド同期／EXIF 回転補正（崩れたら）
 

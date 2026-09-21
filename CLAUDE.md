@@ -30,6 +30,7 @@
 - **画像縮小**：`createImageBitmap` → canvas → `toBlob('image/jpeg', 0.85)`。HEIC は Chrome 非対応なので「JPEG/PNG にしてください」と案内するだけでよい
 - **Nominatim** のレスポンスは `display_name` が長い。表示は `name` があればそれ、無ければ `display_name` の先頭カンマ区切り 1 要素
 - **A4 のブロック配置**：`.sheet` 内は grid ではなく `data-block` の絶対配置（mm、インライン style）。位置は `templates.js` の `blocks` 初期値 → `Trip.layout` 上書き。新テンプレを足すときは blocks と build() の data-block を一致させる
+- **印刷ビューの操作**：`commit(next, {rebuild, history, animate})`。history は Ctrl+Z 用のスタック（'merge' で連打を 1 手に）。animate は FLIP（写真は photoId、他は block id で対応づけ）
 - **道なりルート**：OSRM デモサーバー。区間キーは座標＋profile（`model.segmentKey`）。経路は Trip.routes に保存され、地点変更で prune → 不足分だけ再取得
 - **A4 の実寸**：`.sheet { width:210mm; height:297mm; overflow:hidden }` を画面上では `transform: scale()` で縮小表示、印刷時は `transform:none`。`@media print { body > :not(.sheet) { display:none } }`
 - **フォント**：Google Fonts は `<link>` で読む。印刷前に `document.fonts.ready` を待つ

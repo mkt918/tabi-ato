@@ -56,6 +56,16 @@
 .slot__name { font-weight: 700; }
 .slot__comment { flex-basis: 100%; color: var(--sheet-ink-2); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .sheet__todo { color: var(--sheet-ink-2); }
+/* 小さい枠：番号バッジだけを左上に重ねる */
+.slot__badge { position: absolute; left: 1.5mm; top: 1.5mm; display: grid; place-items: center; width: 5mm; height: 5mm; border-radius: 50%; background: var(--sheet-accent); color: var(--sheet-paper); font-size: 7.5pt; font-weight: 700; box-shadow: 0 0 0 0.4mm var(--sheet-paper); }
+/* ポラロイド：白フチ＋交互に傾ける（傾きは見た目だけ。配置の矩形は軸に平行） */
+.slot--polaroid { background: #fff; padding: 3mm 3mm 2mm; box-shadow: 0 1mm 3mm rgba(0,0,0,0.18); gap: 1mm; }
+.slot--polaroid .slot__img, .slot--polaroid .slot__empty { border-radius: 0; }
+.slot--polaroid .slot__cap { justify-content: center; font-size: 8pt; }
+.slot--polaroid .slot__badge { left: 4mm; top: 4mm; }
+.tpl-polaroid .slot--polaroid:nth-of-type(odd) { transform: rotate(-2deg); }
+.tpl-polaroid .slot--polaroid:nth-of-type(even) { transform: rotate(1.5deg); }
+.tpl-polaroid .slot--polaroid:nth-of-type(3n) { transform: rotate(2.5deg); }
 
 /* ---- テンプレ別（配置は blocks が持つので、ここは中身の見た目だけ） ---- */
 .tpl-map-hero .slot__cap, .tpl-photo-grid .slot__cap { flex: none; }
@@ -96,5 +106,18 @@
   .sheet-viewport { height: auto !important; overflow: visible; }
   .sheet { transform: none !important; box-shadow: none; page-break-after: avoid; }
   .sheet--layout > [data-block] { outline: none; overflow: hidden; }
+  .slot--empty { display: none; } /* 空の写真枠は印刷しない */
   .sheet--layout > [data-block]::after { display: none; }
 }
+
+/* ---- 操作中の見た目（画面のみ。印刷・PNG では出ない） ------------------ */
+.sheet-viewport .slot--drop { outline: 1.2mm solid #b63325; outline-offset: 0.5mm; }
+.sheet-viewport .slot--dragging { opacity: 0.5; }
+.guide { position: absolute; pointer-events: none; z-index: 5; background: #b63325; }
+.guide--v { top: 0; bottom: 0; width: 0.3mm; margin-left: -0.15mm; }
+.guide--h { left: 0; right: 0; height: 0.3mm; margin-top: -0.15mm; }
+.block--flip { will-change: transform; z-index: 3; }
+.block--enter { animation: block-enter 420ms cubic-bezier(0.16, 1, 0.3, 1) both; }
+@keyframes block-enter { from { opacity: 0; transform: scale(0.96); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .block--enter { animation: none; } }
+@media print { .guide, .drag-ghost { display: none !important; } .block--enter, .block--flip { animation: none; transform: none !important; } }

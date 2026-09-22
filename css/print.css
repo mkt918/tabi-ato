@@ -82,7 +82,7 @@
 /* ---- 画面表示：縮小プレビュー ---------------------------------------- */
 .sheet-viewport { --sheet-scale: 1; position: relative; overflow: auto; }
 .sheet-viewport .sheet { transform: scale(var(--sheet-scale)); transform-origin: top left; box-shadow: 0 10px 40px -20px rgba(0,0,0,0.5); }
-.sheet-viewport .slot { cursor: pointer; }
+.sheet-viewport .slot { cursor: pointer; touch-action: none; }
 .sheet-viewport .slot__img { touch-action: none; } /* スマホで写真位置をドラッグできるように（スクロールと競合させない） */
 .sheet-viewport .slot--selected { outline: 1.2mm solid var(--sheet-accent); outline-offset: 0.5mm; }
 /* レイアウト調整モード：ブロックに枠と右下のハンドル */

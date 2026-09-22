@@ -283,3 +283,20 @@ button { cursor: pointer; }
   transform: translate(-50%, -50%) rotate(-3deg); box-shadow: var(--shadow-lift); pointer-events: none; opacity: 0.9;
 }
 .bank-item { touch-action: none; }
+
+/* ---- スマホ・タッチ端末 ---------------------------------------------- */
+/* iOS Safari は文字が 16px 未満の入力欄にふれると自動で拡大する。
+   タッチ端末では入力欄だけ 16px にして拡大を起こさない（見た目の行送りは変えない）。 */
+@media (pointer: coarse) {
+  input, textarea, select,
+  .visit__name, .visit__date, .visit__comment, .visit__transport,
+  .date-range input, .search-input, .input, .input--num, .title-input { font-size: 16px; }
+  .title-input { font-size: 18px; }
+}
+/* ダブルタップ拡大を止める（押せるものだけ。ページ全体のピンチ拡大は残す） */
+button, .btn, .chip, .tile, .swatch, a, label, input, textarea, select,
+.visit, .search-results__item, .bank-item, .slot, .map-style__btn {
+  touch-action: manipulation;
+}
+/* 写真枠と地図はドラッグ操作が主。指でのスクロール／拡大と競合させない */
+.sheet-viewport .slot { touch-action: none; }
